@@ -1,0 +1,17 @@
+$sidebar-width: 360px;
+html.tab-collections-pinned {
+  .tab-collections-react-root {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 2147483647;
+    .tab-collections {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: $sidebar-width;
+      height: 100vh;
+      background: pink;
+    }
+  }
+}

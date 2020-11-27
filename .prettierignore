@@ -1,0 +1,3 @@
+app/public
+dist/
+*.map.js
