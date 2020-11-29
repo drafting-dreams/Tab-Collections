@@ -1,11 +1,11 @@
 const path = require('path')
 
 module.exports = {
-  entry: path.resolve(__dirname, 'src/scripts/index.js'),
+  entry: path.resolve(__dirname, 'background.js'),
   mode: 'production',
   output: {
     path: path.resolve(__dirname, '../', 'build'),
-    filename: 'content.js',
+    filename: 'background.js',
   },
   resolve: {
     modules: [path.resolve(__dirname, '../', 'node_modules')],
@@ -13,9 +13,8 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.(js|jsx)$/,
+        test: /\.(js)$/,
         exclude: /node_modules/,
-        include: path.join(__dirname, 'src'),
         use: {
           loader: 'babel-loader',
         },

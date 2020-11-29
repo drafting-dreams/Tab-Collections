@@ -28,10 +28,13 @@ function unpin(sendMessage = true) {
     })
 }
 
-/* eslint no-undef: "off" */
 // Toggle UI
 chrome.runtime.onMessage.addListener(function (request) {
   switch (request.type) {
+    case 'alert': {
+      alert(request.payload)
+      break
+    }
     case 'clickIcon': {
       const html = document.querySelector('html')
       if (html.className.includes(HTML_CLASS)) {

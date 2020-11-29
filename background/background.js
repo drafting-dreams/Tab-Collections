@@ -1,8 +1,32 @@
+import { connectDB } from './db/connect'
+import * as query from './db/transactions'
+
+let db
+
+try {
+  connectDB(idb => {
+    db = idb
+  })
+} catch (err) {
+  chrome.tabs.query(
+    {
+      active: true,
+      currentWindow: true,
+    },
+    function (tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {
+        type: 'alert',
+        payload: "Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.",
+      })
+    }
+  )
+  throw err
+}
+
 // Whether the extension shows on the page, default is false
 let pinned = false
 // When a new tab registered, push it in
 let pin_registry = []
-/* eslint no-undef: "off" */
 chrome.browserAction.onClicked.addListener(function (tab) {
   chrome.tabs.sendMessage(tab.id, {
     type: 'clickIcon',
@@ -33,6 +57,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       })
       pin_registry = []
       break
+    }
+    case 'add collection': {
+      query.add(db, request.payload)
     }
   }
 })
