@@ -1,16 +1,18 @@
 import React, { useEffect } from 'react'
+import { BrowserRouter as Router, Switch, Route } from 'react-router-dom'
+
+import Home from './Home.jsx'
 
 function Collection() {
-  useEffect(() => {
-    console.log('use effect')
-    setTimeout(() => {
-      chrome.runtime.sendMessage({
-        type: 'add collection',
-        payload: { name: 'me', age: 19 },
-      })
-    }, 8000)
-  }, [])
-  return <div> hello collections </div>
+  return (
+    <Router>
+      <Switch>
+        <Route path="/">
+          <Home />
+        </Route>
+      </Switch>
+    </Router>
+  )
 }
 
 export default Collection

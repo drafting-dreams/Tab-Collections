@@ -1,4 +1,6 @@
 $sidebar-width: 360px;
+$head-height: 130px;
+$icon-color: #3f3f3f;
 html.tab-collections-pinned {
   .tab-collections-react-root {
     position: fixed;
@@ -12,6 +14,47 @@ html.tab-collections-pinned {
       width: $sidebar-width;
       height: 100vh;
       background: pink;
+      .container {
+        .head {
+          position: absolute;
+          top: 0;
+          right: 0;
+          left: 0;
+          height: $head-height;
+          padding: 20px;
+          background-color: #fff;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          color: $icon-color;
+          .title {
+            color: #000;
+            font-size: 24px;
+            font-weight: 600;
+            user-select: none;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .icon {
+            width: 28px;
+            height: 28px;
+            &:hover {
+              background: #f7f7f7;
+            }
+          }
+          .icon-close {
+            font-size: 22px;
+            position: absolute;
+            top: 20px;
+            right: 15px;
+          }
+        }
+        .body {
+          margin-top: $head-height;
+          background-color: #f7f7f7;
+          height: calc(100vh - #{$head-height});
+        }
+      }
     }
   }
 }

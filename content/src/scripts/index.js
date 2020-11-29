@@ -15,7 +15,7 @@ function pin() {
     type: 'pin',
   })
 }
-function unpin(sendMessage = true) {
+export function unpin(sendMessage = true) {
   const html = document.querySelector('html')
   const container = document.querySelector('.tab-collections')
   if (html.className.includes(HTML_CLASS)) {
