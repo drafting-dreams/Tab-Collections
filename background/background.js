@@ -58,8 +58,30 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       pin_registry = []
       break
     }
+    case 'route change': {
+      const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
+      remainTabs.forEach(id => {
+        chrome.tabs.sendMessage(id, {
+          type: 'route change',
+          payload: {
+            route: request.payload.route,
+          },
+        })
+      })
+      break
+    }
     case 'add collection': {
-      query.add(db, request.payload)
+      query.add(db, request.payload).then(id => {
+        sendResponse(id)
+      })
+      // return true indicates that this event listener will response asynchronously
+      return true
+    }
+    case 'get collection': {
+      query.get(db, request.payload.key).then(record => {
+        sendResponse(record)
+      })
+      return true
     }
   }
 })

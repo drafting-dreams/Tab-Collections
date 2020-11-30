@@ -1,18 +1,12 @@
-import React, { useEffect } from 'react'
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom'
-
-import Home from './Home.jsx'
-
-function Collection() {
+import React from 'react'
+import Router from './Router.jsx'
+import Switch from './Switch.jsx'
+function App() {
   return (
     <Router>
-      <Switch>
-        <Route path="/">
-          <Home />
-        </Route>
-      </Switch>
+      <Switch />
     </Router>
   )
 }
 
-export default Collection
+export default App
