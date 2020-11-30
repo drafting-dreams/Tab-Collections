@@ -83,6 +83,18 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       })
       return true
     }
+    case 'get all': {
+      query.list(db).then(records => {
+        sendResponse(records)
+      })
+      return true
+    }
+    case 'update collection': {
+      query.put(db, request.payload).then(result => {
+        sendResponse(result)
+      })
+      return true
+    }
   }
 })
 

@@ -18,14 +18,27 @@ export function add(db, entry) {
 }
 
 export function list(db) {
-  const objStore = getObjectStore(db, DB_STORE_NAME)
-  return objStore.getAll()
+  return new Promise(resolve => {
+    const objStore = getObjectStore(db, DB_STORE_NAME)
+    objStore.getAll().onsuccess = event => {
+      resolve(event.target.result)
+    }
+  })
 }
 
 export function get(db, key) {
   return new Promise(resolve => {
     const objStore = getObjectStore(db, DB_STORE_NAME)
     objStore.get(Number(key)).onsuccess = event => {
+      resolve(event.target.result)
+    }
+  })
+}
+
+export function put(db, entry) {
+  return new Promise(resolve => {
+    const objStore = getObjectStore(db, DB_STORE_NAME, 'readwrite')
+    objStore.put(entry).onsuccess = event => {
       resolve(event.target.result)
     }
   })

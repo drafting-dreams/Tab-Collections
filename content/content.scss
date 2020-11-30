@@ -9,9 +9,11 @@ html.tab-collections-pinned {
     z-index: 2147483647;
     font-size: 14px;
     .tab-collections {
+      border-left: 1px solid #d3d2d1;
       * {
         margin: 0;
         padding: 0;
+        box-sizing: border-box;
       }
       position: fixed;
       top: 0;
@@ -19,7 +21,7 @@ html.tab-collections-pinned {
       width: $sidebar-width;
       height: 100vh;
       background: pink;
-      .container {
+      .tab-collections-container {
         .head {
           position: absolute;
           top: 0;
@@ -31,21 +33,38 @@ html.tab-collections-pinned {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          color: $icon-color;
           .title {
             color: #000;
             font-size: 24px;
             font-weight: 600;
             user-select: none;
             margin: 0 !important;
+            margin-right: 26px !important;
             padding: 0 !important;
+            display: flex;
+            align-items: center;
+          }
+          .icon-link-button {
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+            .button-text {
+              margin-top: 3px;
+            }
           }
           .icon {
             width: 28px;
             height: 28px;
+            color: $icon-color;
             &:hover {
               background: #f7f7f7;
             }
+          }
+          .icon-back {
+            font-size: 20px;
+            width: 24px;
+            height: 24px;
+            margin-right: 6px;
           }
           .icon-close {
             font-size: 22px;
@@ -58,6 +77,30 @@ html.tab-collections-pinned {
           margin-top: $head-height;
           background-color: #f7f7f7;
           height: calc(100vh - #{$head-height});
+          padding: 7px;
+          overflow: auto;
+          &::-webkit-scrollbar {
+            width: 10px;
+          }
+          &::-webkit-scrollbar-thumb {
+            background-color: #a5a5a5;
+          }
+          .paper {
+            margin: 6px 0;
+            height: 60px;
+            padding: 8px;
+            cursor: pointer;
+            &:hover {
+              box-shadow: 0px 2px 2px 1px #e3e2e1;
+            }
+            .title {
+              font-size: 16px;
+              font-weight: 500;
+            }
+            .desc {
+              color: #a5a5a5;
+            }
+          }
         }
       }
     }
