@@ -70,6 +70,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       })
       break
     }
+    case 'get tabs info': {
+      chrome.tabs.query({ currentWindow: true }, function (tabs) {
+        sendResponse(tabs)
+      })
+      return true
+    }
     case 'add collection': {
       query.add(db, request.payload).then(id => {
         sendResponse(id)

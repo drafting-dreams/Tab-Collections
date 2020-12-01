@@ -3,7 +3,7 @@
   "name": "Tab Collections",
   "description": "Tab Collections",
   "version": "1.0",
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
   "background": {
     "scripts": ["background.js"],
     "persistent": true

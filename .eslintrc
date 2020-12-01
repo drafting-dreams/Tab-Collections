@@ -4,7 +4,8 @@
   "parser": "babel-eslint",
   "rules": {
     "prettier/prettier": "error",
-    "default-case": "off"
+    "default-case": "off",
+    "react-hooks/exhaustive-deps": "off"
   },
   "env": {
     "browser": true

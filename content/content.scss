@@ -6,7 +6,7 @@ html.tab-collections-pinned {
     position: fixed;
     top: 0;
     right: 0;
-    z-index: 2147483647;
+    z-index: 2147483646;
     font-size: 14px;
     .tab-collections {
       border-left: 1px solid #d3d2d1;
@@ -14,6 +14,11 @@ html.tab-collections-pinned {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
+        text-align: left;
+        position: static;
+      }
+      div {
+        display: block;
       }
       position: fixed;
       top: 0;
@@ -47,9 +52,9 @@ html.tab-collections-pinned {
           .icon-link-button {
             display: flex;
             align-items: center;
-            font-size: 16px;
-            .button-text {
-              margin-top: 3px;
+            .icon-add {
+              width: 20px;
+              height: 20px;
             }
           }
           .icon {
@@ -57,7 +62,7 @@ html.tab-collections-pinned {
             height: 28px;
             color: $icon-color;
             &:hover {
-              background: #f7f7f7;
+              background: #e7e7e7;
             }
           }
           .icon-back {
@@ -71,6 +76,20 @@ html.tab-collections-pinned {
             position: absolute;
             top: 20px;
             right: 15px;
+          }
+          .icon-add-all,
+          .icon-open-all {
+            width: 20px;
+            height: 20px;
+            position: absolute;
+            bottom: 18px;
+            color: #a5a5a5;
+          }
+          .icon-add-all {
+            right: 46px;
+          }
+          .icon-open-all {
+            right: 18px;
           }
         }
         .body {
@@ -91,14 +110,30 @@ html.tab-collections-pinned {
             padding: 8px;
             cursor: pointer;
             &:hover {
-              box-shadow: 0px 2px 2px 1px #e3e2e1;
+              box-shadow: 0px 1px 6px 1px #e3e2e1;
             }
             .title {
               font-size: 16px;
               font-weight: 500;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
             }
-            .desc {
+            .desc,
+            .url {
               color: #a5a5a5;
+            }
+            .url {
+              margin-top: 18px;
+              display: flex;
+              flex-direction: row;
+              align-items: center;
+              .favicon {
+                margin-right: 5px;
+                width: 15px;
+                height: 15px;
+                color: $icon-color;
+              }
             }
           }
         }
