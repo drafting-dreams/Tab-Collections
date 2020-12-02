@@ -70,6 +70,10 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       })
       break
     }
+    case 'get current tab info': {
+      sendResponse(sender.tab)
+      return true
+    }
     case 'get tabs info': {
       const options = { currentWindow: true }
       if (request.payload.unpinned) {
