@@ -1,16 +1,19 @@
 import React, { useEffect, useState, useContext, useCallback, useRef } from 'react'
-import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
 import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip } from '@material-ui/core'
+import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
 import AddSharpIcon from '@material-ui/icons/AddSharp'
 import ArrowBackIosOutlinedIcon from '@material-ui/icons/ArrowBackIosOutlined'
 import InsertDriveFileOutlinedIcon from '@material-ui/icons/InsertDriveFileOutlined'
 import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
 import AddBoxOutlinedIcon from '@material-ui/icons/AddBoxOutlined'
 import OpenInBrowserOutlinedIcon from '@material-ui/icons/OpenInBrowserOutlined'
+import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
+import LibraryAddOutlinedIcon from '@material-ui/icons/LibraryAddOutlined'
+import LinkOutlinedIcon from '@material-ui/icons/LinkOutlined'
 import { makeStyles } from '@material-ui/core/styles'
-
+import { copy } from '../../../utils'
 const Z_INDEX = 2147483647
 
 const useStyle = makeStyles({
@@ -69,6 +72,7 @@ function Collection({ id }) {
   const [list, setList] = useState([])
   const menuSelected = useRef()
   const [rightClickPosition, setRightClickPosition] = useState(null)
+  const [moreClickPosition, setMoreClickPosition] = useState(null)
 
   useEffect(() => {
     chrome.runtime.sendMessage({ type: 'get collection', payload: { key: id } }, response => {
@@ -109,9 +113,12 @@ function Collection({ id }) {
     deletedList.splice(menuSelected.current, 1)
     setList(deletedList)
 
-    chrome.runtime.sendMessage({ type: 'update collection', payload: { id: Number(id), title, list } })
     setRightClickPosition(null)
   }, [menuSelected.current, setList, setRightClickPosition])
+  const deleteAll = useCallback(() => {
+    setList([])
+    setMoreClickPosition(null)
+  })
 
   const openOneInNewTab = useCallback(() => {
     window.open(list[menuSelected.current].url)
@@ -121,19 +128,35 @@ function Collection({ id }) {
     list.forEach(item => {
       window.open(item.url)
     })
-    setRightClickPosition(null)
-  }, [list, setRightClickPosition])
+    setMoreClickPosition(null)
+  }, [list, setMoreClickPosition])
 
-  const addAllTabs = useCallback(() => {
-    chrome.runtime.sendMessage({ type: 'get tabs info' }, function (response) {
-      setList([
-        ...list,
-        ...response
-          .filter(tab => /^(http|https)/.test(tab.url))
-          .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
-      ])
-    })
-  }, [list, setList])
+  const openMoreOptionsMenu = useCallback(
+    event => {
+      const position = event.currentTarget.getBoundingClientRect()
+      setMoreClickPosition({ x: position.left, y: position.bottom })
+    },
+    [setMoreClickPosition]
+  )
+  const addAllTabs = useCallback(
+    unpinned => () => {
+      chrome.runtime.sendMessage({ type: 'get tabs info', payload: { unpinned } }, function (response) {
+        setList([
+          ...list,
+          ...response
+            .filter(tab => /^(http|https)/.test(tab.url))
+            .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
+        ])
+        setMoreClickPosition(null)
+      })
+    },
+    [list, setList, setMoreClickPosition]
+  )
+
+  const copyUrl = useCallback(() => {
+    copy(list[menuSelected.current].url)
+    setRightClickPosition(null)
+  }, [menuSelected.current, setRightClickPosition])
 
   return (
     <div className="tab-collections-container">
@@ -158,15 +181,47 @@ function Collection({ id }) {
         <div>
           <Link className="icon-link-button" component="button" color="primary" onClick={addCurrentPage}>
             <AddSharpIcon className="icon-add" />
-            <span className="button-text">Add Current Page</span>
+            <span className="button-text">Add Current Tab</span>
           </Link>
         </div>
         <Tooltip title="Add all tabs" classes={{ popper: classes.tooltip }} enterDelay={400}>
-          <AddBoxOutlinedIcon className="icon icon-add-all" onClick={addAllTabs} />
+          <AddBoxOutlinedIcon className="icon icon-add-all" onClick={addAllTabs()} />
         </Tooltip>
-        <Tooltip title="Open all in new tabs" classes={{ popper: classes.tooltip }} enterDelay={400}>
-          <OpenInBrowserOutlinedIcon className="icon icon-open-all" onClick={openAllInNewTab} />
+        <Tooltip title="More options" classes={{ popper: classes.tooltip }} enterDelay={400} onClick={openMoreOptionsMenu}>
+          {/* <OpenInBrowserOutlinedIcon className="icon icon-open-all" onClick={openAllInNewTab} /> */}
+          <MoreHorizOutlinedIcon className="icon icon-more" />
         </Tooltip>
+        <Menu
+          container={document.querySelector('.tab-collections-react-root')}
+          autoFocus={false}
+          anchorReference="anchorPosition"
+          anchorPosition={moreClickPosition ? { left: moreClickPosition.x - 220, top: moreClickPosition.y } : undefined}
+          keepMounted
+          open={moreClickPosition !== null}
+          onClose={() => {
+            setMoreClickPosition(null)
+          }}
+        >
+          <MenuItem classes={classes.listText} onClick={addAllTabs(true)}>
+            <ListItemIcon className={classes.listIconRoot}>
+              <LibraryAddOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            Add all unpinned tabs
+          </MenuItem>
+          <MenuItem classes={classes.listText} onClick={deleteAll}>
+            <ListItemIcon className={classes.listIconRoot}>
+              <DeleteOutlineOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            Delete all tabs
+          </MenuItem>
+          <Divider />
+          <MenuItem classes={classes.listText} onClick={openAllInNewTab}>
+            <ListItemIcon className={classes.listIconRoot}>
+              <OpenInBrowserOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            Open all in new tabs
+          </MenuItem>
+        </Menu>
       </div>
       <div className="body">
         {list.map((item, idx) => (
@@ -191,7 +246,6 @@ function Collection({ id }) {
         ))}
         <Menu
           container={document.querySelector('.tab-collections-react-root')}
-          style={{ zIndex: Z_INDEX }}
           autoFocus={false}
           keepMounted
           open={rightClickPosition !== null}
@@ -205,6 +259,12 @@ function Collection({ id }) {
               : undefined
           }
         >
+          <MenuItem className={classes.listText} onClick={copyUrl}>
+            <ListItemIcon className={classes.listIconRoot}>
+              <LinkOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            Copy URL
+          </MenuItem>
           <MenuItem className={classes.listText} onClick={deleteOne}>
             <ListItemIcon className={classes.listIconRoot}>
               <DeleteOutlineOutlinedIcon fontSize="small" />

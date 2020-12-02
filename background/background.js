@@ -71,6 +71,16 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       break
     }
     case 'get tabs info': {
+      const options = { currentWindow: true }
+      if (request.payload.unpinned) {
+        options.pinned = false
+      }
+      chrome.tabs.query(options, function (tabs) {
+        sendResponse(tabs)
+      })
+      return true
+    }
+    case 'get unpinned tabs info': {
       chrome.tabs.query({ currentWindow: true }, function (tabs) {
         sendResponse(tabs)
       })
