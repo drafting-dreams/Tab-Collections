@@ -27,6 +27,7 @@ try {
 let pinned = false
 // When a new tab registered, push it in
 let pin_registry = []
+let location = '/'
 chrome.browserAction.onClicked.addListener(function (tab) {
   chrome.tabs.sendMessage(tab.id, {
     type: 'clickIcon',
@@ -58,7 +59,8 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       pin_registry = []
       break
     }
-    case 'route change': {
+    case 'inform route change': {
+      location = request.payload.route
       const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
       remainTabs.forEach(id => {
         chrome.tabs.sendMessage(id, {
@@ -93,6 +95,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     case 'add collection': {
       query.add(db, request.payload).then(id => {
         sendResponse(id)
+        const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
+        remainTabs.forEach(id => {
+          chrome.tabs.sendMessage(id, {
+            type: 'reload',
+          })
+        })
       })
       // return true indicates that this event listener will response asynchronously
       return true
@@ -112,12 +120,24 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     case 'update collection': {
       query.put(db, request.payload).then(result => {
         sendResponse(result)
+        const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
+        remainTabs.forEach(id => {
+          chrome.tabs.sendMessage(id, {
+            type: 'reload',
+          })
+        })
       })
       return true
     }
     case 'delete collection': {
       request.payload.keys.forEach(key => {
         query.remove(db, key)
+        const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
+        remainTabs.forEach(id => {
+          chrome.tabs.sendMessage(id, {
+            type: 'reload',
+          })
+        })
       })
       return true
     }
@@ -130,6 +150,10 @@ chrome.tabs.onActivated.addListener(function (activeInfo) {
     type: 'activeInfo',
     payload: { pinned },
   })
+  chrome.tabs.sendMessage(activeInfo.tabId, {
+    type: 'route change',
+    payload: { route: location },
+  })
 })
 
 chrome.tabs.onUpdated.addListener(function (tabId) {
@@ -137,11 +161,19 @@ chrome.tabs.onUpdated.addListener(function (tabId) {
     type: 'activeInfo',
     payload: { pinned },
   })
+  chrome.tabs.sendMessage(tabId, {
+    type: 'route change',
+    payload: { route: location },
+  })
 })
 
 chrome.tabs.onCreated.addListener(function (tab) {
   chrome.tabs.sendMessage(tab.id, {
     type: 'activeInfo',
     payload: { pinned },
+  })
+  chrome.tabs.sendMessage(tab.id, {
+    type: 'route change',
+    payload: { route: location },
   })
 })

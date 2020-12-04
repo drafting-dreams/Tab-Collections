@@ -18,30 +18,36 @@ function goBack(setLocation) {
   setLocation('/')
 }
 
-function updateCollection(payload) {
-  chrome.runtime.sendMessage({ type: 'update collection', payload })
-}
-
 function Collection(props) {
   const { id } = props
 
   const { setLocation } = useContext(RouteContext)
   const [title, setTitle] = useState('')
   const [catchedTitle, setCatchedTitle] = useState('')
-  const [list, setList] = useState([])
+  const [list, setList] = useState(null)
   const [selectedList, setSelectedList] = useState([])
   const menuSelected = useRef()
   const [rightClickPosition, setRightClickPosition] = useState(null)
   const [moreClickPosition, setMoreClickPosition] = useState(null)
   const inputRef = useRef()
+  const prevList = useRef(null)
+  const pending = useRef(true)
 
   useEffect(() => {
+    pending.current = true
     chrome.runtime.sendMessage({ type: 'get collection', payload: { key: id } }, response => {
       setTitle(response.title)
       setList(response.list)
+      pending.current = false
     })
-  }, [])
+  }, [id])
 
+  const updateCollection = useCallback(
+    payload => {
+      if (!pending.current) chrome.runtime.sendMessage({ type: 'update collection', payload })
+    },
+    [list, title]
+  )
   const handleChange = useCallback(
     event => {
       setTitle(event.target.value)
@@ -62,8 +68,13 @@ function Collection(props) {
     })
   }, [list, setList])
   useEffect(() => {
-    updateCollection({ title, list, id: Number(id) })
+    if (prevList.current !== null && list.length !== prevList.current.length) {
+      updateCollection({ title, list, id: Number(id) })
+    }
   }, [list])
+  useEffect(() => {
+    prevList.current = list
+  })
 
   const handleRightClick = useCallback(
     (index, event) => {
@@ -246,43 +257,44 @@ function Collection(props) {
         </Paper>
       </div>
       <div className="body">
-        {list.map((item, idx) => {
-          const selected = selectedList.includes(idx)
-          return (
-            <Paper
-              className={`paper ${selected ? 'paper-selected' : ''}`}
-              variant="outlined"
-              key={`${item.url}${idx}`}
-              style={{ height: '75px' }}
-              onClick={() => {
-                if (selectedList.length) {
-                  checkOn(idx)
-                } else {
-                  window.location.href = item.url
-                }
-              }}
-              onContextMenu={event => {
-                handleRightClick(idx, event)
-              }}
-            >
-              <div className="title">{item.title}</div>
-              <div className="url">
-                {item.favicon ? <img className="favicon" src={item.favicon} alt="" /> : <InsertDriveFileOutlinedIcon className="favicon" />}
-                {item.host.split('.').slice(-2).join('.')}
-              </div>
-              <div
-                className="checkbox"
-                style={{ display: selected ? 'block' : '' }}
-                onClick={event => {
-                  event.stopPropagation()
-                  checkOn(idx)
+        {list &&
+          list.map((item, idx) => {
+            const selected = selectedList.includes(idx)
+            return (
+              <Paper
+                className={`paper ${selected ? 'paper-selected' : ''}`}
+                variant="outlined"
+                key={`${item.url}${idx}`}
+                style={{ height: '75px' }}
+                onClick={() => {
+                  if (selectedList.length) {
+                    checkOn(idx)
+                  } else {
+                    window.location.href = item.url
+                  }
+                }}
+                onContextMenu={event => {
+                  handleRightClick(idx, event)
                 }}
               >
-                <Checkbox color="primary" checked={selected} />
-              </div>
-            </Paper>
-          )
-        })}
+                <div className="title">{item.title}</div>
+                <div className="url">
+                  {item.favicon ? <img className="favicon" src={item.favicon} alt="" /> : <InsertDriveFileOutlinedIcon className="favicon" />}
+                  {item.host.split('.').slice(-2).join('.')}
+                </div>
+                <div
+                  className="checkbox"
+                  style={{ display: selected ? 'block' : '' }}
+                  onClick={event => {
+                    event.stopPropagation()
+                    checkOn(idx)
+                  }}
+                >
+                  <Checkbox color="primary" checked={selected} />
+                </div>
+              </Paper>
+            )
+          })}
         <Menu
           container={document.querySelector('.tab-collections-react-root')}
           autoFocus={false}
