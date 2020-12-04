@@ -21,6 +21,10 @@ function copyManifest() {
   return gulp.src('manifest.json').pipe(gulp.dest('./build'))
 }
 
+function copyFavIcon() {
+  return gulp.src(['./logo/logo16.png', './logo/logo48.png', './logo/logo128.png']).pipe(gulp.dest('./build'))
+}
+
 function packBackground(cb) {
   webpack(backgroundWebpackConfig, function (err, stats) {
     if (err) {
@@ -40,7 +44,7 @@ function clean(cb) {
   rimraf('./build', cb)
 }
 
-const build = gulp.series(clean, copyManifest, compileCSS, packBackground, packContent)
+const build = gulp.series(clean, gulp.parallel(copyManifest, copyFavIcon, compileCSS, packBackground, packContent))
 
 exports.build = build
 exports.watch = function () {
