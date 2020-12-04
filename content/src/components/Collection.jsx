@@ -12,39 +12,7 @@ import OpenInBrowserOutlinedIcon from '@material-ui/icons/OpenInBrowserOutlined'
 import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
 import LibraryAddOutlinedIcon from '@material-ui/icons/LibraryAddOutlined'
 import LinkOutlinedIcon from '@material-ui/icons/LinkOutlined'
-import { makeStyles } from '@material-ui/core/styles'
 import { copy } from '../../../utils'
-const Z_INDEX = 2147483647
-
-const useStyle = makeStyles({
-  tooltip: {
-    zIndex: Z_INDEX,
-  },
-  input: {
-    flexShrink: 1,
-    '& input': {
-      fontSize: '24px !important',
-      border: 'none !important',
-      boxShadow: 'none !important',
-      backgroundColor: 'transparent !important',
-      textOverflow: 'ellipsis',
-      '&:hover, &:focus': {
-        backgroundColor: '#e7e7e7 !important',
-      },
-    },
-  },
-  listIconRoot: {
-    minWidth: '30px',
-    fontSize: '14px;',
-  },
-  listIcon: {
-    width: '22px',
-    height: '22px',
-  },
-  listText: {
-    fontSize: '14px',
-  },
-})
 
 function goBack(setLocation) {
   setLocation('/')
@@ -54,8 +22,8 @@ function updateCollection(payload) {
   chrome.runtime.sendMessage({ type: 'update collection', payload })
 }
 
-function Collection({ id }) {
-  const classes = useStyle()
+function Collection(props) {
+  const { id } = props
 
   const { setLocation } = useContext(RouteContext)
   const [title, setTitle] = useState('')
@@ -173,6 +141,17 @@ function Collection({ id }) {
     [list, setList, setMoreClickPosition]
   )
 
+  const checkOn = useCallback(
+    idx => {
+      const filtered = selectedList.filter(i => i !== idx)
+      if (filtered.length === selectedList.length) {
+        filtered.push(idx)
+      }
+      setSelectedList(filtered)
+    },
+    [selectedList]
+  )
+
   const copyUrl = useCallback(() => {
     copy(list[menuSelected.current].url)
     setRightClickPosition(null)
@@ -191,10 +170,11 @@ function Collection({ id }) {
           />
           <InputBase
             ref={inputRef}
-            className={classes.input}
+            className="input"
             value={title}
             onChange={handleChange}
             onFocus={() => {
+              inputRef.current.children[0].select()
               setCatchedTitle(title)
             }}
             onBlur={handleTitleSave}
@@ -211,10 +191,10 @@ function Collection({ id }) {
             <span className="button-text">Add Current Tab</span>
           </Link>
         </div>
-        <Tooltip title="Add all tabs" classes={{ popper: classes.tooltip }} enterDelay={400}>
+        <Tooltip title="Add all tabs" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
           <AddBoxOutlinedIcon className="icon icon-add-all" onClick={addAllTabs()} />
         </Tooltip>
-        <Tooltip title="More options" classes={{ popper: classes.tooltip }} enterDelay={400} onClick={openMoreOptionsMenu}>
+        <Tooltip title="More options" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400} onClick={openMoreOptionsMenu}>
           {/* <OpenInBrowserOutlinedIcon className="icon icon-open-all" onClick={openAllInNewTab} /> */}
           <MoreHorizOutlinedIcon className="icon icon-more" />
         </Tooltip>
@@ -229,22 +209,22 @@ function Collection({ id }) {
             setMoreClickPosition(null)
           }}
         >
-          <MenuItem className={classes.listText} onClick={addAllTabs(true)}>
-            <ListItemIcon className={classes.listIconRoot}>
-              <LibraryAddOutlinedIcon className={classes.listIcon} />
+          <MenuItem className="list-text" onClick={addAllTabs(true)}>
+            <ListItemIcon className="list-icon-root">
+              <LibraryAddOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Add all unpinned tabs
           </MenuItem>
-          <MenuItem className={classes.listText} onClick={deleteAll}>
-            <ListItemIcon className={classes.listIconRoot}>
-              <DeleteOutlineOutlinedIcon className={classes.listIcon} />
+          <MenuItem className="list-text" onClick={deleteAll}>
+            <ListItemIcon className="list-icon-root">
+              <DeleteOutlineOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Delete all tabs
           </MenuItem>
           <Divider />
-          <MenuItem className={classes.listText} onClick={openAllInNewTab}>
-            <ListItemIcon className={classes.listIconRoot}>
-              <OpenInBrowserOutlinedIcon className={classes.listIcon} />
+          <MenuItem className="list-text" onClick={openAllInNewTab}>
+            <ListItemIcon className="list-icon-root">
+              <OpenInBrowserOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Open all in new tabs
           </MenuItem>
@@ -257,10 +237,10 @@ function Collection({ id }) {
             }}
           />
           <span style={{ flexGrow: 1, marginLeft: '2px' }}>{selectedList.length} tab selected</span>
-          <Tooltip title="Open selected" classes={{ popper: classes.tooltip }} enterDelay={400}>
+          <Tooltip title="Open selected" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
             <OpenInBrowserOutlinedIcon className="tip-icon" onClick={openSelectedInNewTab} />
           </Tooltip>
-          <Tooltip title="Delete selected" classes={{ popper: classes.tooltip }} enterDelay={400}>
+          <Tooltip title="Delete selected" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
             <DeleteOutlineOutlinedIcon className="tip-icon" onClick={deleteSelected} />
           </Tooltip>
         </Paper>
@@ -275,7 +255,11 @@ function Collection({ id }) {
               key={`${item.url}${idx}`}
               style={{ height: '75px' }}
               onClick={() => {
-                window.location.href = item.url
+                if (selectedList.length) {
+                  checkOn(idx)
+                } else {
+                  window.location.href = item.url
+                }
               }}
               onContextMenu={event => {
                 handleRightClick(idx, event)
@@ -291,11 +275,7 @@ function Collection({ id }) {
                 style={{ display: selected ? 'block' : '' }}
                 onClick={event => {
                   event.stopPropagation()
-                  const filtered = selectedList.filter(i => i !== idx)
-                  if (filtered.length === selectedList.length) {
-                    filtered.push(idx)
-                  }
-                  setSelectedList(filtered)
+                  checkOn(idx)
                 }}
               >
                 <Checkbox color="primary" checked={selected} />
@@ -318,22 +298,22 @@ function Collection({ id }) {
               : undefined
           }
         >
-          <MenuItem className={classes.listText} onClick={copyUrl}>
-            <ListItemIcon className={classes.listIconRoot}>
-              <LinkOutlinedIcon className={classes.listIcon} />
+          <MenuItem className="list-text" onClick={copyUrl}>
+            <ListItemIcon className="list-icon-root">
+              <LinkOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Copy URL
           </MenuItem>
-          <MenuItem className={classes.listText} onClick={deleteOne}>
-            <ListItemIcon className={classes.listIconRoot}>
-              <DeleteOutlineOutlinedIcon className={classes.listIcon} />
+          <MenuItem className="list-text" onClick={deleteOne}>
+            <ListItemIcon className="list-icon-root">
+              <DeleteOutlineOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Delete
           </MenuItem>
           <Divider />
-          <MenuItem className={classes.listText} onClick={openOneInNewTab}>
-            <ListItemIcon className={classes.listIconRoot}>
-              <InsertDriveFileOutlinedIcon className={classes.listIcon} />
+          <MenuItem className="list-text" onClick={openOneInNewTab}>
+            <ListItemIcon className="list-icon-root">
+              <InsertDriveFileOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Open in new Tab
           </MenuItem>

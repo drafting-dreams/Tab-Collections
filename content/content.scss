@@ -9,6 +9,20 @@ html.tab-collections-pinned {
     right: 0;
     z-index: 2147483646;
     font-size: 14px;
+    .list-text {
+      font-size: 14px;
+    }
+    .list-icon-root {
+      min-width: 30px;
+      font-size: 14px;
+    }
+    .list-icon {
+      width: 22px;
+      height: 22px;
+    }
+    .home-menu {
+      width: 147px;
+    }
     .tab-collections {
       border-left: 1px solid #d3d2d1;
       * {
@@ -17,6 +31,10 @@ html.tab-collections-pinned {
         box-sizing: border-box;
         text-align: left;
         position: static;
+        font-family: Arial, sans-serif;
+        font-weight: 400;
+        font-size: 14px;
+        line-height: 1.35;
       }
       div {
         display: block;
@@ -49,6 +67,23 @@ html.tab-collections-pinned {
             padding: 0 !important;
             display: flex;
             align-items: center;
+            .input {
+              flex-shrink: 1;
+              input {
+                font-size: 24px !important;
+                border: none !important;
+                box-shadow: none !important;
+                background-color: transparent !important;
+                text-overflow: ellipsis;
+                &:hover,
+                &:focus {
+                  background-color: #e7e7e7 !important;
+                }
+              }
+            }
+          }
+          .button-text {
+            font-size: 16px;
           }
           .icon-link-button {
             display: flex;
@@ -182,4 +217,11 @@ html.tab-collections-pinned {
       }
     }
   }
+}
+
+.tab-collection-max-z-index {
+  * {
+    font-size: 12px !important;
+  }
+  z-index: 2147483647 !important;
 }

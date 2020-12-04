@@ -115,6 +115,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       })
       return true
     }
+    case 'delete collection': {
+      request.payload.keys.forEach(key => {
+        query.remove(db, key)
+      })
+      return true
+    }
   }
 })
 

@@ -43,3 +43,12 @@ export function put(db, entry) {
     }
   })
 }
+
+export function remove(db, key) {
+  return new Promise(resolve => {
+    const objStore = getObjectStore(db, DB_STORE_NAME, 'readwrite')
+    objStore.delete(key).onsuccess = event => {
+      resolve(event.target.result)
+    }
+  })
+}
