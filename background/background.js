@@ -23,12 +23,35 @@ try {
   throw err
 }
 
-// Whether the extension shows on the page, default is false
-let pinned = false
-// When a new tab registered, push it in
-let pin_registry = []
-let location = '/'
-chrome.browserAction.onClicked.addListener(function (tab) {
+const localStorage = chrome.storage.local
+
+// Initialization on first installation
+chrome.runtime.onInstalled.addListener(() => {
+  // Whether the extension shows on the page, default is false
+  localStorage.set({ pinned: false })
+  // When a new tab registered, push it in
+  localStorage.set({ pin_registry: '' })
+  localStorage.set({ location: '/' })
+})
+
+function getLocalStorage(key, cb) {
+  localStorage.get([key], re => {
+    cb(re[key])
+  })
+}
+function setLocalStorage(key, value) {
+  localStorage.set({ [key]: value })
+}
+function getPinRegistry(cb) {
+  getLocalStorage('pin_registry', pin_registry => {
+    cb(pin_registry.split(',').map(id => Number(id)))
+  })
+}
+function setPinRegistry(ids) {
+  setLocalStorage('pin_registry', ids.join(','))
+}
+
+chrome.action.onClicked.addListener(function (tab) {
   chrome.tabs.sendMessage(tab.id, {
     type: 'clickIcon',
   })
@@ -37,39 +60,50 @@ chrome.browserAction.onClicked.addListener(function (tab) {
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   switch (request.type) {
     case 'ask if pinned': {
-      sendResponse({ pinned })
+      getLocalStorage('pinned', pinned => {
+        sendResponse({ pinned })
+      })
       break
     }
     case 'pin': {
-      pinned = true
-      if (sender.tab && !pin_registry.includes(sender.tab.id)) {
-        pin_registry.push(sender.tab.id)
-      }
+      setLocalStorage('pinned', true)
+      getPinRegistry(pin_registry => {
+        if (sender.tab && !pin_registry.includes(sender.tab.id)) {
+          pin_registry.push(sender.tab.id)
+          setPinRegistry(pin_registry)
+        }
+      })
       break
     }
     // To remove the UI on the pinned tabs
     case 'unpin': {
-      pinned = false
-      const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-      remainTabs.forEach(id => {
-        chrome.tabs.sendMessage(id, {
-          type: 'unpin',
+      setLocalStorage('pinned', false)
+      getPinRegistry(pin_registry => {
+        const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
+        remainTabs.forEach(id => {
+          chrome.tabs.sendMessage(id, {
+            type: 'unpin',
+          })
         })
+        setPinRegistry([])
       })
-      pin_registry = []
       break
     }
     case 'inform route change': {
-      location = request.payload.route
-      const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-      remainTabs.forEach(id => {
-        chrome.tabs.sendMessage(id, {
-          type: 'route change',
-          payload: {
-            route: request.payload.route,
-          },
+      const location = request.payload.route
+      setLocalStorage('location', location)
+      getPinRegistry(pin_registry => {
+        const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
+        remainTabs.forEach(id => {
+          chrome.tabs.sendMessage(id, {
+            type: 'route change',
+            payload: {
+              route: location,
+            },
+          })
         })
       })
+
       break
     }
     case 'get current tab info': {
@@ -95,10 +129,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     case 'add collection': {
       query.add(db, request.payload).then(id => {
         sendResponse(id)
-        const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-        remainTabs.forEach(id => {
-          chrome.tabs.sendMessage(id, {
-            type: 'reload',
+        getPinRegistry(pin_registry => {
+          const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
+          remainTabs.forEach(id => {
+            chrome.tabs.sendMessage(id, {
+              type: 'reload',
+            })
           })
         })
       })
@@ -120,10 +156,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     case 'update collection': {
       query.put(db, request.payload).then(result => {
         sendResponse(result)
-        const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-        remainTabs.forEach(id => {
-          chrome.tabs.sendMessage(id, {
-            type: 'reload',
+        getPinRegistry(pin_registry => {
+          const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
+          remainTabs.forEach(id => {
+            chrome.tabs.sendMessage(id, {
+              type: 'reload',
+            })
           })
         })
       })
@@ -132,10 +170,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     case 'delete collection': {
       request.payload.keys.forEach(key => {
         query.remove(db, key)
-        const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-        remainTabs.forEach(id => {
-          chrome.tabs.sendMessage(id, {
-            type: 'reload',
+        getPinRegistry(pin_registry => {
+          const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
+          remainTabs.forEach(id => {
+            chrome.tabs.sendMessage(id, {
+              type: 'reload',
+            })
           })
         })
       })
@@ -145,35 +185,24 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 })
 
 // Tell the tab whether the extension has been pinned on the page, when the tab is activated, refreshed or created
-chrome.tabs.onActivated.addListener(function (activeInfo) {
-  chrome.tabs.sendMessage(activeInfo.tabId, {
-    type: 'activeInfo',
-    payload: { pinned },
+function updateHandler(tabId) {
+  localStorage.get(['pinned', 'location'], ({ pinned, location }) => {
+    chrome.tabs.sendMessage(tabId, {
+      type: 'activeInfo',
+      payload: { pinned },
+    })
+    chrome.tabs.sendMessage(tabId, {
+      type: 'route change',
+      payload: { route: location },
+    })
   })
-  chrome.tabs.sendMessage(activeInfo.tabId, {
-    type: 'route change',
-    payload: { route: location },
-  })
+}
+chrome.tabs.onActivated.addListener(activeInfo => {
+  updateHandler(activeInfo.tabId)
 })
 
-chrome.tabs.onUpdated.addListener(function (tabId) {
-  chrome.tabs.sendMessage(tabId, {
-    type: 'activeInfo',
-    payload: { pinned },
-  })
-  chrome.tabs.sendMessage(tabId, {
-    type: 'route change',
-    payload: { route: location },
-  })
-})
+chrome.tabs.onUpdated.addListener(updateHandler)
 
-chrome.tabs.onCreated.addListener(function (tab) {
-  chrome.tabs.sendMessage(tab.id, {
-    type: 'activeInfo',
-    payload: { pinned },
-  })
-  chrome.tabs.sendMessage(tab.id, {
-    type: 'route change',
-    payload: { route: location },
-  })
+chrome.tabs.onCreated.addListener(tab => {
+  updateHandler(tab.id)
 })

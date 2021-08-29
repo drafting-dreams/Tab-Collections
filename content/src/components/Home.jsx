@@ -164,7 +164,7 @@ function Home(props) {
               : undefined
           }
         >
-          {menuSelected.current !== undefined && collections[menuSelected.current].list.length > 0 && (
+          {menuSelected.current !== undefined && collections[menuSelected.current]?.list.length > 0 && (
             <MenuItem className="list-text" onClick={openTabs}>
               <ListItemIcon className="list-icon-root">
                 <OpenInBrowserOutlinedIcon className="list-icon" />
