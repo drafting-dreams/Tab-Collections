@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useContext, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
 import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip, Checkbox } from '@material-ui/core'
@@ -42,33 +42,28 @@ function Collection(props) {
     })
   }, [id])
 
-  const updateCollection = useCallback(
-    payload => {
-      if (!pending.current) chrome.runtime.sendMessage({ type: 'update collection', payload })
-    },
-    [list, title]
-  )
-  const handleChange = useCallback(
-    event => {
-      setTitle(event.target.value)
-    },
-    [setTitle]
-  )
-  const handleTitleSave = useCallback(() => {
+  const updateCollection = payload => {
+    if (!pending.current) chrome.runtime.sendMessage({ type: 'update collection', payload })
+  }
+  const handleChange = event => {
+    setTitle(event.target.value)
+  }
+  const handleTitleSave = () => {
     if (title.trim() === '') {
       setTitle(catchedTitle)
       return
     }
     updateCollection({ title, list, id: Number(id) })
-  }, [title, catchedTitle, setTitle])
+  }
 
-  const addCurrentPage = useCallback(() => {
+  const addCurrentPage = () => {
     chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
       setList([...list, { url: window.location.href, host: window.location.host, title: document.title, favicon: response.favIconUrl }])
     })
-  }, [list, setList])
+  }
   useEffect(() => {
     if (prevList.current !== null && list.length !== prevList.current.length) {
+      console.log(list)
       updateCollection({ title, list, id: Number(id) })
     }
   }, [list])
@@ -76,97 +71,85 @@ function Collection(props) {
     prevList.current = list
   })
 
-  const handleRightClick = useCallback(
-    (index, event) => {
-      event.preventDefault()
-      // block this function if there are selected items
-      if (selectedList.length) {
-        return
-      }
-      menuSelected.current = index
-      setRightClickPosition({ x: event.clientX, y: event.clientY })
-    },
-    [selectedList, setRightClickPosition]
-  )
-  const handleMenuClose = useCallback(() => {
+  const handleRightClick = (index, event) => {
+    event.preventDefault()
+    // block this function if there are selected items
+    if (selectedList.length) {
+      return
+    }
+    menuSelected.current = index
+    setRightClickPosition({ x: event.clientX, y: event.clientY })
+  }
+  const handleMenuClose = () => {
     menuSelected.current = undefined
     setRightClickPosition(null)
-  }, [setRightClickPosition])
+  }
 
-  const deleteOne = useCallback(() => {
+  const deleteOne = () => {
     const deletedList = [...list]
     deletedList.splice(menuSelected.current, 1)
     setList(deletedList)
 
     setRightClickPosition(null)
-  }, [menuSelected.current, setList, setRightClickPosition])
-  const deleteAll = useCallback(() => {
+  }
+  const deleteAll = () => {
     setList([])
     setMoreClickPosition(null)
-  }, [setList, setMoreClickPosition])
-  const deleteSelected = useCallback(() => {
+  }
+  const deleteSelected = () => {
     const temp = [...list]
     selectedList.forEach(i => {
       temp[i] = undefined
     })
     setList(temp.filter(item => item !== undefined))
     setSelectedList([])
-  }, [list, selectedList, setList, setSelectedList])
+  }
 
-  const openOneInNewTab = useCallback(() => {
+  const openOneInNewTab = () => {
     window.open(list[menuSelected.current].url)
     setRightClickPosition(null)
-  }, [menuSelected.current, setRightClickPosition])
-  const openAllInNewTab = useCallback(() => {
+  }
+  const openAllInNewTab = () => {
     list.forEach(item => {
       window.open(item.url)
     })
     setMoreClickPosition(null)
-  }, [list, setMoreClickPosition])
-  const openSelectedInNewTab = useCallback(() => {
+  }
+  const openSelectedInNewTab = () => {
     selectedList.forEach(i => {
       window.open(list[i].url)
     })
     setSelectedList([])
-  }, [list, selectedList, setSelectedList])
+  }
 
-  const openMoreOptionsMenu = useCallback(
-    event => {
-      const position = event.currentTarget.getBoundingClientRect()
-      setMoreClickPosition({ x: position.left, y: position.bottom })
-    },
-    [setMoreClickPosition]
-  )
-  const addAllTabs = useCallback(
-    unpinned => () => {
-      chrome.runtime.sendMessage({ type: 'get tabs info', payload: { unpinned } }, function (response) {
-        setList([
-          ...list,
-          ...response
-            .filter(tab => /^(http|https)/.test(tab.url))
-            .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
-        ])
-        setMoreClickPosition(null)
-      })
-    },
-    [list, setList, setMoreClickPosition]
-  )
+  const openMoreOptionsMenu = event => {
+    const position = event.currentTarget.getBoundingClientRect()
+    setMoreClickPosition({ x: position.left, y: position.bottom })
+  }
+  const addAllTabs = unpinned => () => {
+    chrome.runtime.sendMessage({ type: 'get tabs info', payload: { unpinned } }, function (response) {
+      setList([
+        ...list,
+        ...response
+          .filter(tab => /^(http|https)/.test(tab.url))
+          .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
+      ])
+      setMoreClickPosition(null)
+    })
+  }
 
-  const checkOn = useCallback(
-    idx => {
-      const filtered = selectedList.filter(i => i !== idx)
-      if (filtered.length === selectedList.length) {
-        filtered.push(idx)
-      }
-      setSelectedList(filtered)
-    },
-    [selectedList]
-  )
+  const checkOn = idx => {
+    const filtered = selectedList.filter(i => i !== idx)
+    if (filtered.length === selectedList.length) {
+      filtered.push(idx)
+    }
+    setSelectedList(filtered)
+  }
 
-  const copyUrl = useCallback(() => {
+  const copyUrl = () => {
     copy(list[menuSelected.current].url)
     setRightClickPosition(null)
-  }, [menuSelected.current, setRightClickPosition])
+  }
 
   return (
     <div className="tab-collections-container">

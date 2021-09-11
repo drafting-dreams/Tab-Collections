@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState, useRef } from 'react'
+import React, { useContext, useEffect, useState, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
 import { Paper, Link, Menu, MenuItem, ListItemIcon, Checkbox, Tooltip } from '@material-ui/core'
@@ -58,28 +58,25 @@ function Home(props) {
     })
   }
 
-  const handleRightClick = useCallback(
-    (index, event) => {
-      event.preventDefault()
-      menuSelected.current = index
-      setRightClickPosition({ x: event.clientX, y: event.clientY })
-    },
-    [menuSelected.current, setRightClickPosition]
-  )
-  const openTabs = useCallback(() => {
+  const handleRightClick = (index, event) => {
+    event.preventDefault()
+    menuSelected.current = index
+    setRightClickPosition({ x: event.clientX, y: event.clientY })
+  }
+  const openTabs = () => {
     collections[menuSelected.current].list.forEach(item => {
       window.open(item.url)
     })
     setRightClickPosition(null)
-  }, [collections, menuSelected.current, setRightClickPosition])
-  const deleteCollection = useCallback(() => {
+  }
+  const deleteCollection = () => {
     chrome.runtime.sendMessage({ type: 'delete collection', payload: { keys: [collections[menuSelected.current].id] } })
     const temp = [...collections]
     temp.splice(menuSelected.current, 1)
     setCollections(temp)
     setRightClickPosition(null)
-  }, [menuSelected.current, collections, setRightClickPosition])
-  const deleteSelected = useCallback(() => {
+  }
+  const deleteSelected = () => {
     chrome.runtime.sendMessage({ type: 'delete collection', payload: { keys: selectedList.map(idx => collections[idx].id) } })
     const temp = [...collections]
     selectedList.forEach(i => {
@@ -87,22 +84,19 @@ function Home(props) {
     })
     setCollections(temp.filter(c => c !== undefined))
     setSelectedList([])
-  }, [collections, selectedList, setCollections])
-  const handleMenuClose = useCallback(() => {
+  }
+  const handleMenuClose = () => {
     menuSelected.current = undefined
     setRightClickPosition(null)
-  }, [setRightClickPosition])
+  }
 
-  const checkOn = useCallback(
-    idx => {
-      const filtered = selectedList.filter(i => i !== idx)
-      if (filtered.length === selectedList.length) {
-        filtered.push(idx)
-      }
-      setSelectedList(filtered)
-    },
-    [selectedList]
-  )
+  const checkOn = idx => {
+    const filtered = selectedList.filter(i => i !== idx)
+    if (filtered.length === selectedList.length) {
+      filtered.push(idx)
+    }
+    setSelectedList(filtered)
+  }
 
   return (
     <div className="tab-collections-container">
