@@ -51,6 +51,17 @@ function setPinRegistry(ids) {
   setLocalStorage('pin_registry', ids.join(','))
 }
 
+function reloadExtensionContent({ selfId, excludeSelf = true }) {
+  getPinRegistry(pin_registry => {
+    if (excludeSelf) pin_registry = pin_registry.filter(id => id !== selfId)
+    pin_registry.forEach(id => {
+      chrome.tabs.sendMessage(id, {
+        type: 'reload',
+      })
+    })
+  })
+}
+
 chrome.action.onClicked.addListener(function (tab) {
   chrome.tabs.sendMessage(tab.id, {
     type: 'clickIcon',
@@ -129,14 +140,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     case 'add collection': {
       query.add(db, request.payload).then(id => {
         sendResponse(id)
-        getPinRegistry(pin_registry => {
-          const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-          remainTabs.forEach(id => {
-            chrome.tabs.sendMessage(id, {
-              type: 'reload',
-            })
-          })
-        })
+        reloadExtensionContent({ selfId: sender.tab.id })
       })
       // return true indicates that this event listener will response asynchronously
       return true
@@ -156,28 +160,14 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     case 'update collection': {
       query.put(db, request.payload).then(result => {
         sendResponse(result)
-        getPinRegistry(pin_registry => {
-          const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-          remainTabs.forEach(id => {
-            chrome.tabs.sendMessage(id, {
-              type: 'reload',
-            })
-          })
-        })
+        reloadExtensionContent({ selfId: sender.tab.id })
       })
       return true
     }
     case 'delete collection': {
       request.payload.keys.forEach(key => {
         query.remove(db, key)
-        getPinRegistry(pin_registry => {
-          const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-          remainTabs.forEach(id => {
-            chrome.tabs.sendMessage(id, {
-              type: 'reload',
-            })
-          })
-        })
+        reloadExtensionContent({ selfId: sender.tab.id })
       })
       return true
     }
@@ -205,13 +195,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                 .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
             })
             .then(() => {
-              getPinRegistry(pin_registry => {
-                pin_registry.forEach(id => {
-                  chrome.tabs.sendMessage(id, {
-                    type: 'reload',
-                  })
-                })
-              })
+              reloadExtensionContent({ excludeSelf: false })
             })
         })
       } else {
@@ -219,13 +203,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         query
           .add(db, { title: TITLE_PLACEHOLDER, list: [{ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] }] })
           .then(() => {
-            getPinRegistry(pin_registry => {
-              pin_registry.forEach(id => {
-                chrome.tabs.sendMessage(id, {
-                  type: 'reload',
-                })
-              })
-            })
+            reloadExtensionContent({ excludeSelf: false })
           })
       }
     }
