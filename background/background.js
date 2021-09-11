@@ -181,6 +181,54 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       })
       return true
     }
+
+    case 'get group info': {
+      chrome.tabGroups.get(request.payload.groupId).then(groupInfo => {
+        sendResponse(groupInfo)
+      })
+      return true
+    }
+    case 'create collection using a group': {
+      const TITLE_PLACEHOLDER = 'New Collections'
+      const {
+        payload: { groupId },
+      } = request
+      if (typeof groupId === 'number' && groupId >= 0) {
+        const groupInfoPromise = chrome.tabGroups.get(request.payload.groupId)
+        const tabsInfoPromise = chrome.tabs.query({ currentWindow: true })
+        Promise.all([groupInfoPromise, tabsInfoPromise]).then(([groupInfo, tabsInfo]) => {
+          query
+            .add(db, {
+              title: groupInfo.title.trim() ? groupInfo.title : TITLE_PLACEHOLDER,
+              list: tabsInfo
+                .filter(tab => tab.groupId === groupId)
+                .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
+            })
+            .then(() => {
+              getPinRegistry(pin_registry => {
+                pin_registry.forEach(id => {
+                  chrome.tabs.sendMessage(id, {
+                    type: 'reload',
+                  })
+                })
+              })
+            })
+        })
+      } else {
+        const tab = sender.tab
+        query
+          .add(db, { title: TITLE_PLACEHOLDER, list: [{ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] }] })
+          .then(() => {
+            getPinRegistry(pin_registry => {
+              pin_registry.forEach(id => {
+                chrome.tabs.sendMessage(id, {
+                  type: 'reload',
+                })
+              })
+            })
+          })
+      }
+    }
   }
 })
 

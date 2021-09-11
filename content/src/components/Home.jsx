@@ -7,6 +7,14 @@ import AddSharpIcon from '@material-ui/icons/AddSharp'
 import DeleteOutlineOutlined from '@material-ui/icons/DeleteOutlineOutlined'
 import OpenInBrowserOutlinedIcon from '@material-ui/icons/OpenInBrowserOutlined'
 import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
+import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
+import PostAddOutlinedIcon from '@material-ui/icons/PostAddOutlined'
+
+// Edge Browser also has this chrome info in its useragent,
+// So here I only use the Chrome version.
+// Note: chrome.tabGroups API is only available with Chrome89+ and Manifest V3+
+const CHROME_VERSION = /Chrome\/(\d+)/.exec(navigator.userAgent) ? Number(/Chrome\/(\d+)/.exec(navigator.userAgent)[1]) : 0
+const ENABLE_GROUP_TAB_FEATURE = CHROME_VERSION >= 89
 
 function createCollection(setLocation) {
   chrome.runtime.sendMessage(
@@ -27,6 +35,8 @@ function Home(props) {
   const { setLocation } = useContext(RouteContext)
   const [collections, setCollections] = useState([])
 
+  const [moreClickPosition, setMoreClickPosition] = useState(null)
+
   const menuSelected = useRef()
   const [selectedList, setSelectedList] = useState([])
   const [rightClickPosition, setRightClickPosition] = useState(null)
@@ -36,6 +46,17 @@ function Home(props) {
       setCollections(response)
     })
   }, [])
+
+  const openMoreOptionsMenu = event => {
+    const position = event.currentTarget.getBoundingClientRect()
+    setMoreClickPosition({ x: position.left, y: position.bottom })
+  }
+  const createCollectionWithGroup = () => {
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
+      const { groupId } = response
+      chrome.runtime.sendMessage({ type: 'create collection using a group', payload: { groupId } })
+    })
+  }
 
   const handleRightClick = useCallback(
     (index, event) => {
@@ -101,6 +122,31 @@ function Home(props) {
             <span className="button-text">Create new Collections</span>
           </Link>
         </div>
+        {ENABLE_GROUP_TAB_FEATURE && (
+          <Tooltip title="More options" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400} onClick={openMoreOptionsMenu}>
+            <MoreHorizOutlinedIcon className="icon icon-more" />
+          </Tooltip>
+        )}
+        {ENABLE_GROUP_TAB_FEATURE && (
+          <Menu
+            container={document.querySelector('.tab-collections-react-root')}
+            autoFocus={false}
+            anchorReference="anchorPosition"
+            anchorPosition={moreClickPosition ? { left: moreClickPosition.x - 300, top: moreClickPosition.y } : undefined}
+            keepMounted
+            open={moreClickPosition !== null}
+            onClose={() => {
+              setMoreClickPosition(null)
+            }}
+          >
+            <MenuItem className="list-text" onClick={createCollectionWithGroup}>
+              <ListItemIcon className="list-icon-root">
+                <PostAddOutlinedIcon className="list-icon" />
+              </ListItemIcon>
+              Create collection with current tab group
+            </MenuItem>
+          </Menu>
+        )}
         <Paper className="selected-tip" style={{ display: selectedList.length ? 'flex' : 'none' }}>
           <CloseSharpIcon
             className="tip-icon"
