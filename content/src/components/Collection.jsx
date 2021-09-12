@@ -63,7 +63,6 @@ function Collection(props) {
   }
   useEffect(() => {
     if (prevList.current !== null && list.length !== prevList.current.length) {
-      console.log(list)
       updateCollection({ title, list, id: Number(id) })
     }
   }, [list])

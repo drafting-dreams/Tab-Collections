@@ -6,6 +6,7 @@ import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
 import AddSharpIcon from '@material-ui/icons/AddSharp'
 import DeleteOutlineOutlined from '@material-ui/icons/DeleteOutlineOutlined'
 import OpenInBrowserOutlinedIcon from '@material-ui/icons/OpenInBrowserOutlined'
+import FolderOpenOutlinedIcon from '@material-ui/icons/FolderOpenOutlined'
 import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
 import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
 import PostAddOutlinedIcon from '@material-ui/icons/PostAddOutlined'
@@ -67,6 +68,10 @@ function Home(props) {
     collections[menuSelected.current].list.forEach(item => {
       window.open(item.url)
     })
+    setRightClickPosition(null)
+  }
+  const openTabsInAGroup = () => {
+    chrome.runtime.sendMessage({ type: 'open tabs in a group', payload: collections[menuSelected.current] })
     setRightClickPosition(null)
   }
   const deleteCollection = () => {
@@ -189,7 +194,6 @@ function Home(props) {
           )
         })}
         <Menu
-          classes={{ paper: 'home-menu' }}
           container={document.querySelector('.tab-collections-react-root')}
           autoFocus={false}
           keepMounted
@@ -198,19 +202,29 @@ function Home(props) {
           anchorReference="anchorPosition"
           anchorPosition={
             rightClickPosition
-              ? window.innerWidth - rightClickPosition.x > 147 // 170 is the menu's width
+              ? window.innerWidth - rightClickPosition.x > 245 // 1245 is the menu's width
                 ? { top: rightClickPosition.y, left: rightClickPosition.x }
-                : { top: rightClickPosition.y, left: rightClickPosition.x - 147 }
+                : { top: rightClickPosition.y, left: rightClickPosition.x - 245 }
               : undefined
           }
         >
           {menuSelected.current !== undefined && collections[menuSelected.current]?.list.length > 0 && (
-            <MenuItem className="list-text" onClick={openTabs}>
-              <ListItemIcon className="list-icon-root">
-                <OpenInBrowserOutlinedIcon className="list-icon" />
-              </ListItemIcon>
-              Open all tabs
-            </MenuItem>
+            <>
+              <MenuItem className="list-text" onClick={openTabs}>
+                <ListItemIcon className="list-icon-root">
+                  <OpenInBrowserOutlinedIcon className="list-icon" />
+                </ListItemIcon>
+                Open all tabs
+              </MenuItem>
+              {ENABLE_GROUP_TAB_FEATURE && (
+                <MenuItem className="list-text" onClick={openTabsInAGroup}>
+                  <ListItemIcon className="list-icon-root">
+                    <FolderOpenOutlinedIcon className="list-icon" />
+                  </ListItemIcon>
+                  Open all tabs in a new group
+                </MenuItem>
+              )}
+            </>
           )}
           <MenuItem className="list-text" onClick={deleteCollection}>
             <ListItemIcon className="list-icon-root">

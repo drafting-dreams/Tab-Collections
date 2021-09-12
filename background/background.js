@@ -206,6 +206,20 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             reloadExtensionContent({ excludeSelf: false })
           })
       }
+      break
+    }
+    case 'open tabs in a group': {
+      const collection = request.payload
+      const openTabPromises = collection.list.map(tabInfo => chrome.tabs.create({ url: tabInfo.url }))
+      Promise.all(openTabPromises).then(tabs => {
+        chrome.tabs
+          .group({
+            tabIds: tabs.map(tab => tab.id),
+          })
+          .then(groupId => {
+            chrome.tabGroups.update(groupId, { title: collection.title })
+          })
+      })
     }
   }
 })
