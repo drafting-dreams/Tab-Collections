@@ -51,6 +51,17 @@ function setPinRegistry(ids) {
   setLocalStorage('pin_registry', ids.join(','))
 }
 
+function reloadExtensionContent({ selfId, excludeSelf = true }) {
+  getPinRegistry(pin_registry => {
+    if (excludeSelf) pin_registry = pin_registry.filter(id => id !== selfId)
+    pin_registry.forEach(id => {
+      chrome.tabs.sendMessage(id, {
+        type: 'reload',
+      })
+    })
+  })
+}
+
 chrome.action.onClicked.addListener(function (tab) {
   chrome.tabs.sendMessage(tab.id, {
     type: 'clickIcon',
@@ -129,14 +140,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     case 'add collection': {
       query.add(db, request.payload).then(id => {
         sendResponse(id)
-        getPinRegistry(pin_registry => {
-          const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-          remainTabs.forEach(id => {
-            chrome.tabs.sendMessage(id, {
-              type: 'reload',
-            })
-          })
-        })
+        reloadExtensionContent({ selfId: sender.tab.id })
       })
       // return true indicates that this event listener will response asynchronously
       return true
@@ -156,30 +160,66 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     case 'update collection': {
       query.put(db, request.payload).then(result => {
         sendResponse(result)
-        getPinRegistry(pin_registry => {
-          const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-          remainTabs.forEach(id => {
-            chrome.tabs.sendMessage(id, {
-              type: 'reload',
-            })
-          })
-        })
+        reloadExtensionContent({ selfId: sender.tab.id })
       })
       return true
     }
     case 'delete collection': {
       request.payload.keys.forEach(key => {
         query.remove(db, key)
-        getPinRegistry(pin_registry => {
-          const remainTabs = pin_registry.filter(id => id !== sender.tab.id)
-          remainTabs.forEach(id => {
-            chrome.tabs.sendMessage(id, {
-              type: 'reload',
-            })
-          })
-        })
+        reloadExtensionContent({ selfId: sender.tab.id })
       })
       return true
+    }
+
+    case 'get group info': {
+      chrome.tabGroups.get(request.payload.groupId).then(groupInfo => {
+        sendResponse(groupInfo)
+      })
+      return true
+    }
+    case 'create collection using a group': {
+      const TITLE_PLACEHOLDER = 'New Collections'
+      const {
+        payload: { groupId },
+      } = request
+      if (typeof groupId === 'number' && groupId >= 0) {
+        const groupInfoPromise = chrome.tabGroups.get(request.payload.groupId)
+        const tabsInfoPromise = chrome.tabs.query({ currentWindow: true })
+        Promise.all([groupInfoPromise, tabsInfoPromise]).then(([groupInfo, tabsInfo]) => {
+          query
+            .add(db, {
+              title: groupInfo.title.trim() ? groupInfo.title : TITLE_PLACEHOLDER,
+              list: tabsInfo
+                .filter(tab => tab.groupId === groupId)
+                .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
+            })
+            .then(() => {
+              reloadExtensionContent({ excludeSelf: false })
+            })
+        })
+      } else {
+        const tab = sender.tab
+        query
+          .add(db, { title: TITLE_PLACEHOLDER, list: [{ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] }] })
+          .then(() => {
+            reloadExtensionContent({ excludeSelf: false })
+          })
+      }
+      break
+    }
+    case 'open tabs in a group': {
+      const collection = request.payload
+      const openTabPromises = collection.list.map(tabInfo => chrome.tabs.create({ url: tabInfo.url }))
+      Promise.all(openTabPromises).then(tabs => {
+        chrome.tabs
+          .group({
+            tabIds: tabs.map(tab => tab.id),
+          })
+          .then(groupId => {
+            chrome.tabGroups.update(groupId, { title: collection.title })
+          })
+      })
     }
   }
 })

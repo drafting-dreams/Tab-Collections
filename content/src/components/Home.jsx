@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useState, useRef } from 'react'
+import React, { useContext, useEffect, useState, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
 import { Paper, Link, Menu, MenuItem, ListItemIcon, Checkbox, Tooltip } from '@material-ui/core'
@@ -6,7 +6,16 @@ import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
 import AddSharpIcon from '@material-ui/icons/AddSharp'
 import DeleteOutlineOutlined from '@material-ui/icons/DeleteOutlineOutlined'
 import OpenInBrowserOutlinedIcon from '@material-ui/icons/OpenInBrowserOutlined'
+import FolderOpenOutlinedIcon from '@material-ui/icons/FolderOpenOutlined'
 import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
+import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
+import PostAddOutlinedIcon from '@material-ui/icons/PostAddOutlined'
+
+// Edge Browser also has this chrome info in its useragent,
+// So here I only use the Chrome version.
+// Note: chrome.tabGroups API is only available with Chrome89+ and Manifest V3+
+const CHROME_VERSION = /Chrome\/(\d+)/.exec(navigator.userAgent) ? Number(/Chrome\/(\d+)/.exec(navigator.userAgent)[1]) : 0
+const ENABLE_GROUP_TAB_FEATURE = CHROME_VERSION >= 89
 
 function createCollection(setLocation) {
   chrome.runtime.sendMessage(
@@ -27,6 +36,8 @@ function Home(props) {
   const { setLocation } = useContext(RouteContext)
   const [collections, setCollections] = useState([])
 
+  const [moreClickPosition, setMoreClickPosition] = useState(null)
+
   const menuSelected = useRef()
   const [selectedList, setSelectedList] = useState([])
   const [rightClickPosition, setRightClickPosition] = useState(null)
@@ -37,28 +48,40 @@ function Home(props) {
     })
   }, [])
 
-  const handleRightClick = useCallback(
-    (index, event) => {
-      event.preventDefault()
-      menuSelected.current = index
-      setRightClickPosition({ x: event.clientX, y: event.clientY })
-    },
-    [menuSelected.current, setRightClickPosition]
-  )
-  const openTabs = useCallback(() => {
+  const openMoreOptionsMenu = event => {
+    const position = event.currentTarget.getBoundingClientRect()
+    setMoreClickPosition({ x: position.left, y: position.bottom })
+  }
+  const createCollectionWithGroup = () => {
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
+      const { groupId } = response
+      chrome.runtime.sendMessage({ type: 'create collection using a group', payload: { groupId } })
+    })
+  }
+
+  const handleRightClick = (index, event) => {
+    event.preventDefault()
+    menuSelected.current = index
+    setRightClickPosition({ x: event.clientX, y: event.clientY })
+  }
+  const openTabs = () => {
     collections[menuSelected.current].list.forEach(item => {
       window.open(item.url)
     })
     setRightClickPosition(null)
-  }, [collections, menuSelected.current, setRightClickPosition])
-  const deleteCollection = useCallback(() => {
+  }
+  const openTabsInAGroup = () => {
+    chrome.runtime.sendMessage({ type: 'open tabs in a group', payload: collections[menuSelected.current] })
+    setRightClickPosition(null)
+  }
+  const deleteCollection = () => {
     chrome.runtime.sendMessage({ type: 'delete collection', payload: { keys: [collections[menuSelected.current].id] } })
     const temp = [...collections]
     temp.splice(menuSelected.current, 1)
     setCollections(temp)
     setRightClickPosition(null)
-  }, [menuSelected.current, collections, setRightClickPosition])
-  const deleteSelected = useCallback(() => {
+  }
+  const deleteSelected = () => {
     chrome.runtime.sendMessage({ type: 'delete collection', payload: { keys: selectedList.map(idx => collections[idx].id) } })
     const temp = [...collections]
     selectedList.forEach(i => {
@@ -66,22 +89,19 @@ function Home(props) {
     })
     setCollections(temp.filter(c => c !== undefined))
     setSelectedList([])
-  }, [collections, selectedList, setCollections])
-  const handleMenuClose = useCallback(() => {
+  }
+  const handleMenuClose = () => {
     menuSelected.current = undefined
     setRightClickPosition(null)
-  }, [setRightClickPosition])
+  }
 
-  const checkOn = useCallback(
-    idx => {
-      const filtered = selectedList.filter(i => i !== idx)
-      if (filtered.length === selectedList.length) {
-        filtered.push(idx)
-      }
-      setSelectedList(filtered)
-    },
-    [selectedList]
-  )
+  const checkOn = idx => {
+    const filtered = selectedList.filter(i => i !== idx)
+    if (filtered.length === selectedList.length) {
+      filtered.push(idx)
+    }
+    setSelectedList(filtered)
+  }
 
   return (
     <div className="tab-collections-container">
@@ -101,6 +121,31 @@ function Home(props) {
             <span className="button-text">Create new Collections</span>
           </Link>
         </div>
+        {ENABLE_GROUP_TAB_FEATURE && (
+          <Tooltip title="More options" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400} onClick={openMoreOptionsMenu}>
+            <MoreHorizOutlinedIcon className="icon icon-more" />
+          </Tooltip>
+        )}
+        {ENABLE_GROUP_TAB_FEATURE && (
+          <Menu
+            container={document.querySelector('.tab-collections-react-root')}
+            autoFocus={false}
+            anchorReference="anchorPosition"
+            anchorPosition={moreClickPosition ? { left: moreClickPosition.x - 300, top: moreClickPosition.y } : undefined}
+            keepMounted
+            open={moreClickPosition !== null}
+            onClose={() => {
+              setMoreClickPosition(null)
+            }}
+          >
+            <MenuItem className="list-text" onClick={createCollectionWithGroup}>
+              <ListItemIcon className="list-icon-root">
+                <PostAddOutlinedIcon className="list-icon" />
+              </ListItemIcon>
+              Create collection with current tab group
+            </MenuItem>
+          </Menu>
+        )}
         <Paper className="selected-tip" style={{ display: selectedList.length ? 'flex' : 'none' }}>
           <CloseSharpIcon
             className="tip-icon"
@@ -149,7 +194,6 @@ function Home(props) {
           )
         })}
         <Menu
-          classes={{ paper: 'home-menu' }}
           container={document.querySelector('.tab-collections-react-root')}
           autoFocus={false}
           keepMounted
@@ -158,19 +202,29 @@ function Home(props) {
           anchorReference="anchorPosition"
           anchorPosition={
             rightClickPosition
-              ? window.innerWidth - rightClickPosition.x > 147 // 170 is the menu's width
+              ? window.innerWidth - rightClickPosition.x > 245 // 1245 is the menu's width
                 ? { top: rightClickPosition.y, left: rightClickPosition.x }
-                : { top: rightClickPosition.y, left: rightClickPosition.x - 147 }
+                : { top: rightClickPosition.y, left: rightClickPosition.x - 245 }
               : undefined
           }
         >
           {menuSelected.current !== undefined && collections[menuSelected.current]?.list.length > 0 && (
-            <MenuItem className="list-text" onClick={openTabs}>
-              <ListItemIcon className="list-icon-root">
-                <OpenInBrowserOutlinedIcon className="list-icon" />
-              </ListItemIcon>
-              Open all tabs
-            </MenuItem>
+            <>
+              <MenuItem className="list-text" onClick={openTabs}>
+                <ListItemIcon className="list-icon-root">
+                  <OpenInBrowserOutlinedIcon className="list-icon" />
+                </ListItemIcon>
+                Open all tabs
+              </MenuItem>
+              {ENABLE_GROUP_TAB_FEATURE && (
+                <MenuItem className="list-text" onClick={openTabsInAGroup}>
+                  <ListItemIcon className="list-icon-root">
+                    <FolderOpenOutlinedIcon className="list-icon" />
+                  </ListItemIcon>
+                  Open all tabs in a new group
+                </MenuItem>
+              )}
+            </>
           )}
           <MenuItem className="list-text" onClick={deleteCollection}>
             <ListItemIcon className="list-icon-root">
