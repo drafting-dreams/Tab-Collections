@@ -2,6 +2,10 @@
   "name": "tab_collections",
   "version": "1.0.0",
   "author": "Shawn Liu",
+  "scripts": {
+    "build": "gulp build",
+    "dev": "gulp build --dev"
+  },
   "dependencies": {
     "@material-ui/core": "^4.11.1",
     "@material-ui/icons": "^4.9.1",
