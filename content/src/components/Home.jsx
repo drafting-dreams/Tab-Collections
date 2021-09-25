@@ -103,6 +103,9 @@ function Home(props) {
     setSelectedList(filtered)
   }
 
+  const showOpenAllTabsMenuItem = menuSelected.current !== undefined && collections[menuSelected.current]?.list.length > 0
+  const showOpenInNewTabMenuItem = showOpenAllTabsMenuItem && ENABLE_GROUP_TAB_FEATURE
+
   return (
     <div className="tab-collections-container">
       <div className="head">
@@ -208,23 +211,21 @@ function Home(props) {
               : undefined
           }
         >
-          {menuSelected.current !== undefined && collections[menuSelected.current]?.list.length > 0 && (
-            <>
-              <MenuItem className="list-text" onClick={openTabs}>
-                <ListItemIcon className="list-icon-root">
-                  <OpenInBrowserOutlinedIcon className="list-icon" />
-                </ListItemIcon>
-                Open all tabs
-              </MenuItem>
-              {ENABLE_GROUP_TAB_FEATURE && (
-                <MenuItem className="list-text" onClick={openTabsInAGroup}>
-                  <ListItemIcon className="list-icon-root">
-                    <FolderOpenOutlinedIcon className="list-icon" />
-                  </ListItemIcon>
-                  Open all tabs in a new group
-                </MenuItem>
-              )}
-            </>
+          {showOpenAllTabsMenuItem && (
+            <MenuItem className="list-text" onClick={openTabs}>
+              <ListItemIcon className="list-icon-root">
+                <OpenInBrowserOutlinedIcon className="list-icon" />
+              </ListItemIcon>
+              Open all tabs
+            </MenuItem>
+          )}
+          {showOpenInNewTabMenuItem && (
+            <MenuItem className="list-text" onClick={openTabsInAGroup}>
+              <ListItemIcon className="list-icon-root">
+                <FolderOpenOutlinedIcon className="list-icon" />
+              </ListItemIcon>
+              Open all tabs in a new group
+            </MenuItem>
           )}
           <MenuItem className="list-text" onClick={deleteCollection}>
             <ListItemIcon className="list-icon-root">
