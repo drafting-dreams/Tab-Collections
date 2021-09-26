@@ -32,6 +32,19 @@ chrome.runtime.onInstalled.addListener(() => {
   // When a new tab registered, push it in
   localStorage.set({ pin_registry: '' })
   localStorage.set({ location: '/' })
+
+  chrome.tabs.query({}, tabs => {
+    tabs.forEach(tab => {
+      chrome.scripting
+        .executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js'],
+        })
+        .catch(err => {
+          console.log(err) // Usually, caused by an unloaded page, or a chrome internal url to which the extension doesn't have access
+        })
+    })
+  })
 })
 
 function getLocalStorage(key, cb) {

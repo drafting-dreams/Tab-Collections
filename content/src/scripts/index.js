@@ -59,8 +59,11 @@ chrome.runtime.onMessage.addListener(function (request) {
 })
 
 // Create react-dom render container
+const CONTAINER_CLASSNAME = 'tab-collections-react-root'
+const outdatedExtension = document.getElementsByClassName(CONTAINER_CLASSNAME)
+if (outdatedExtension && outdatedExtension.length) outdatedExtension[0].remove()
 const container = document.querySelector('body').appendChild(document.createElement('div'))
-container.className = 'tab-collections-react-root'
+container.className = CONTAINER_CLASSNAME
 
 render(
   <div className="tab-collections" style={{ display: 'none' }}>
