@@ -1,6 +1,4 @@
 const gulp = require('gulp')
-const sass = require('gulp-sass')
-const autoprefixer = require('gulp-autoprefixer')
 const webpack = require('webpack')
 const rimraf = require('rimraf')
 const path = require('path')
@@ -48,19 +46,11 @@ function packBackground(cb) {
   })
 }
 
-function compileCSS() {
-  return gulp
-    .src('./content/content.scss')
-    .pipe(sass().on('error', sass.logError))
-    .pipe(autoprefixer())
-    .pipe(gulp.dest(`./${TARGET_FOLDER}`))
-}
-
 function clean(cb) {
   rimraf(`./${TARGET_FOLDER}`, cb)
 }
 
-const build = gulp.series(clean, gulp.parallel(copyManifest, copyFavIcon, compileCSS, packBackground, packContent))
+const build = gulp.series(clean, gulp.parallel(copyManifest, copyFavIcon, packBackground, packContent))
 
 exports.build = build
 exports.watch = function () {

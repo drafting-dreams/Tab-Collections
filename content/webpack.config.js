@@ -1,4 +1,5 @@
 const path = require('path')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
 module.exports = {
   entry: path.resolve(__dirname, 'src/scripts/index.js'),
@@ -14,12 +15,27 @@ module.exports = {
     rules: [
       {
         test: /\.(js|jsx)$/,
-        exclude: /node_modules/,
-        include: path.join(__dirname, 'src'),
         use: {
           loader: 'babel-loader',
         },
       },
+      {
+        test: /\.s[ac]ss$/i,
+        use: [
+          MiniCssExtractPlugin.loader,
+          'css-loader',
+          'postcss-loader',
+          {
+            loader: 'sass-loader',
+            options: {
+              sassOptions: {
+                outputStyle: 'expanded',
+              },
+            },
+          },
+        ],
+      },
     ],
   },
+  plugins: [new MiniCssExtractPlugin({ filename: 'content.css' })],
 }

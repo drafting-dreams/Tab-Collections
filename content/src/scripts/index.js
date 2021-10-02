@@ -2,6 +2,8 @@ import React from 'react'
 import { render } from 'react-dom'
 import App from '../components/App.jsx'
 
+import '../content.scss'
+
 const HTML_CLASS = 'tab-collections-pinned'
 
 function pin() {
