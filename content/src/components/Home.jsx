@@ -221,9 +221,9 @@ function Home(props) {
           anchorReference="anchorPosition"
           anchorPosition={
             rightClickPosition
-              ? window.innerWidth - rightClickPosition.x > 245 // 1245 is the menu's width
+              ? window.innerWidth - rightClickPosition.x > (showOpenAllTabsMenuItem ? 245 : 105) // menu's width
                 ? { top: rightClickPosition.y, left: rightClickPosition.x }
-                : { top: rightClickPosition.y, left: rightClickPosition.x - 245 }
+                : { top: rightClickPosition.y, left: rightClickPosition.x - (showOpenAllTabsMenuItem ? 245 : 105) }
               : undefined
           }
         >
