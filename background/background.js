@@ -166,7 +166,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     }
     case 'get all': {
       query.list(db).then(records => {
-        sendResponse(records)
+        sendResponse(records.reverse())
       })
       return true
     }
