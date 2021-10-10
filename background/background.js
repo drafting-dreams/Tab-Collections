@@ -74,6 +74,9 @@ async function handleMessage(request, sender) {
       if (sender.tab && !pin_registry.includes(sender.tab.id)) {
         pin_registry.push(sender.tab.id)
         setPinRegistry(pin_registry)
+        chrome.tabs.sendMessage(sender.tab.id, {
+          type: 'reload',
+        })
       }
       break
     }
