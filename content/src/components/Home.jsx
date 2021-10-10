@@ -91,9 +91,13 @@ function Home(props) {
     setSelectedList([])
   }
   const handleMenuClose = () => {
-    menuSelected.current = undefined
     setRightClickPosition(null)
   }
+  useEffect(() => {
+    if (rightClickPosition === null) {
+      menuSelected.current = undefined
+    }
+  }, [rightClickPosition])
 
   const checkOn = idx => {
     const filtered = selectedList.filter(i => i !== idx)
