@@ -104,8 +104,8 @@ function Collection(props) {
     setSelectedList([])
   }
 
-  const openOneInNewTab = () => {
-    window.open(list[menuSelected.current].url)
+  const openOneInCurrentTab = () => {
+    window.location.href = list[menuSelected.current].url
     setRightClickPosition(null)
   }
   const openAllInNewTab = () => {
@@ -252,7 +252,7 @@ function Collection(props) {
                   if (selectedList.length) {
                     checkOn(idx)
                   } else {
-                    window.location.href = item.url
+                    window.open(item.url)
                   }
                 }}
                 onContextMenu={event => {
@@ -286,9 +286,9 @@ function Collection(props) {
           anchorReference="anchorPosition"
           anchorPosition={
             rightClickPosition
-              ? window.innerWidth - rightClickPosition.x > 170 // 170 is the menu's width
+              ? window.innerWidth - rightClickPosition.x > 185 // 185 is the menu's width
                 ? { top: rightClickPosition.y, left: rightClickPosition.x }
-                : { top: rightClickPosition.y, left: rightClickPosition.x - 170 }
+                : { top: rightClickPosition.y, left: rightClickPosition.x - 185 }
               : undefined
           }
         >
@@ -305,11 +305,11 @@ function Collection(props) {
             Delete
           </MenuItem>
           <Divider />
-          <MenuItem className="list-text" onClick={openOneInNewTab}>
+          <MenuItem className="list-text" onClick={openOneInCurrentTab}>
             <ListItemIcon className="list-icon-root">
               <InsertDriveFileOutlinedIcon className="list-icon" />
             </ListItemIcon>
-            Open in new Tab
+            Open in current tab
           </MenuItem>
         </Menu>
       </div>
