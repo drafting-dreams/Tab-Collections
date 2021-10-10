@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
-import { Paper, Link, Menu, MenuItem, ListItemIcon, Checkbox, Tooltip } from '@material-ui/core'
+import { Paper, Link, Menu, MenuItem, ListItemIcon, Checkbox, Tooltip, Divider } from '@material-ui/core'
 import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
 import AddSharpIcon from '@material-ui/icons/AddSharp'
 import DeleteOutlineOutlined from '@material-ui/icons/DeleteOutlineOutlined'
@@ -10,27 +10,13 @@ import FolderOpenOutlinedIcon from '@material-ui/icons/FolderOpenOutlined'
 import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
 import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
 import PostAddOutlinedIcon from '@material-ui/icons/PostAddOutlined'
+import SwapCallsIcon from '@material-ui/icons/SwapCalls'
 
 // Edge Browser also has this chrome info in its useragent,
 // So here I only use the Chrome version.
 // Note: chrome.tabGroups API is only available with Chrome89+ and Manifest V3+
 const CHROME_VERSION = /Chrome\/(\d+)/.exec(navigator.userAgent) ? Number(/Chrome\/(\d+)/.exec(navigator.userAgent)[1]) : 0
 const ENABLE_GROUP_TAB_FEATURE = CHROME_VERSION >= 89
-
-function createCollection(setLocation) {
-  chrome.runtime.sendMessage(
-    {
-      type: 'add collection',
-      payload: {
-        title: 'New Collections',
-        list: [],
-      },
-    },
-    response => {
-      setLocation(`/collection/${response}`)
-    }
-  )
-}
 
 function Home(props) {
   const { setLocation } = useContext(RouteContext)
@@ -47,6 +33,21 @@ function Home(props) {
       setCollections(response)
     })
   }, [])
+
+  const createCollection = () => {
+    chrome.runtime.sendMessage(
+      {
+        type: 'add collection',
+        payload: {
+          title: 'New Collections',
+          list: [],
+        },
+      },
+      response => {
+        setLocation(`/collection/${response}`)
+      }
+    )
+  }
 
   const openMoreOptionsMenu = event => {
     const position = event.currentTarget.getBoundingClientRect()
@@ -74,6 +75,17 @@ function Home(props) {
     chrome.runtime.sendMessage({ type: 'open tabs in a group', payload: collections[menuSelected.current] })
     setRightClickPosition(null)
   }
+  const replaceCurrentGroup = () => {
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
+      const { groupId } = response
+      if (typeof groupId === 'number' && groupId >= 0) {
+        chrome.runtime.sendMessage({ type: 'replace current group', payload: { groupId, collection: collections[menuSelected.current] } })
+        setRightClickPosition(null)
+      } else {
+        openTabsInAGroup()
+      }
+    })
+  }
   const deleteCollection = () => {
     chrome.runtime.sendMessage({ type: 'delete collection', payload: { keys: [collections[menuSelected.current].id] } })
     const temp = [...collections]
@@ -91,9 +103,13 @@ function Home(props) {
     setSelectedList([])
   }
   const handleMenuClose = () => {
-    menuSelected.current = undefined
     setRightClickPosition(null)
   }
+  useEffect(() => {
+    if (rightClickPosition === null) {
+      menuSelected.current = undefined
+    }
+  }, [rightClickPosition])
 
   const checkOn = idx => {
     const filtered = selectedList.filter(i => i !== idx)
@@ -117,7 +133,7 @@ function Home(props) {
             component="button"
             color="primary"
             onClick={() => {
-              createCollection(setLocation)
+              createCollection()
             }}
           >
             <AddSharpIcon className="icon-add" />
@@ -205,9 +221,9 @@ function Home(props) {
           anchorReference="anchorPosition"
           anchorPosition={
             rightClickPosition
-              ? window.innerWidth - rightClickPosition.x > 245 // 1245 is the menu's width
+              ? window.innerWidth - rightClickPosition.x > (showOpenAllTabsMenuItem ? 245 : 105) // menu's width
                 ? { top: rightClickPosition.y, left: rightClickPosition.x }
-                : { top: rightClickPosition.y, left: rightClickPosition.x - 245 }
+                : { top: rightClickPosition.y, left: rightClickPosition.x - (showOpenAllTabsMenuItem ? 245 : 105) }
               : undefined
           }
         >
@@ -227,6 +243,15 @@ function Home(props) {
               Open all tabs in a new group
             </MenuItem>
           )}
+          {showOpenInNewTabMenuItem && (
+            <MenuItem className="list-text" onClick={replaceCurrentGroup}>
+              <ListItemIcon className="list-icon-root">
+                <SwapCallsIcon className="list-icon" />
+              </ListItemIcon>
+              Replace current group
+            </MenuItem>
+          )}
+          {showOpenAllTabsMenuItem && <Divider />}
           <MenuItem className="list-text" onClick={deleteCollection}>
             <ListItemIcon className="list-icon-root">
               <DeleteOutlineOutlined className="list-icon" />
