@@ -185,19 +185,13 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       return true
     }
 
-    case 'get group info': {
-      chrome.tabGroups.get(request.payload.groupId).then(groupInfo => {
-        sendResponse(groupInfo)
-      })
-      return true
-    }
     case 'create collection using a group': {
       const TITLE_PLACEHOLDER = 'New Collections'
       const {
         payload: { groupId },
       } = request
       if (typeof groupId === 'number' && groupId >= 0) {
-        const groupInfoPromise = chrome.tabGroups.get(request.payload.groupId)
+        const groupInfoPromise = chrome.tabGroups.get(groupId)
         const tabsInfoPromise = chrome.tabs.query({ currentWindow: true })
         Promise.all([groupInfoPromise, tabsInfoPromise]).then(([groupInfo, tabsInfo]) => {
           query
@@ -223,7 +217,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     }
     case 'open tabs in a group': {
       const collection = request.payload
-      const openTabPromises = collection.list.map(tabInfo => chrome.tabs.create({ url: tabInfo.url }))
+      const openTabPromises = collection.list.map(({ url }) => chrome.tabs.create({ url }))
       Promise.all(openTabPromises).then(tabs => {
         chrome.tabs
           .group({
@@ -233,6 +227,23 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             chrome.tabGroups.update(groupId, { title: collection.title })
           })
       })
+      break
+    }
+    case 'replace current group': {
+      const {
+        payload: { groupId, collection },
+      } = request
+      if (typeof groupId === 'number' && groupId >= 0) {
+        const groupInfoPromise = chrome.tabGroups.get(groupId)
+        const tabsInfoPromise = chrome.tabs.query({ currentWindow: true })
+        const openTabPromises = Promise.all(collection.list.map(({ url }) => chrome.tabs.create({ url })))
+        Promise.all([groupInfoPromise, tabsInfoPromise, openTabPromises]).then(([groupInfo, tabsInfo, openedTabs]) => {
+          chrome.tabs.group({ groupId, tabIds: openedTabs.map(tab => tab.id) }).then(() => {
+            chrome.tabGroups.update(groupId, { title: collection.title })
+            chrome.tabs.remove(tabsInfo.filter(({ groupId: gId }) => gId === groupId).map(tab => tab.id))
+          })
+        })
+      }
     }
   }
 })

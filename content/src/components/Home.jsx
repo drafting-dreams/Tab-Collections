@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
-import { Paper, Link, Menu, MenuItem, ListItemIcon, Checkbox, Tooltip } from '@material-ui/core'
+import { Paper, Link, Menu, MenuItem, ListItemIcon, Checkbox, Tooltip, Divider } from '@material-ui/core'
 import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
 import AddSharpIcon from '@material-ui/icons/AddSharp'
 import DeleteOutlineOutlined from '@material-ui/icons/DeleteOutlineOutlined'
@@ -10,6 +10,7 @@ import FolderOpenOutlinedIcon from '@material-ui/icons/FolderOpenOutlined'
 import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
 import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
 import PostAddOutlinedIcon from '@material-ui/icons/PostAddOutlined'
+import SwapCallsIcon from '@material-ui/icons/SwapCalls'
 
 // Edge Browser also has this chrome info in its useragent,
 // So here I only use the Chrome version.
@@ -73,6 +74,17 @@ function Home(props) {
   const openTabsInAGroup = () => {
     chrome.runtime.sendMessage({ type: 'open tabs in a group', payload: collections[menuSelected.current] })
     setRightClickPosition(null)
+  }
+  const replaceCurrentGroup = () => {
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
+      const { groupId } = response
+      if (typeof groupId === 'number' && groupId >= 0) {
+        chrome.runtime.sendMessage({ type: 'replace current group', payload: { groupId, collection: collections[menuSelected.current] } })
+        setRightClickPosition(null)
+      } else {
+        openTabsInAGroup()
+      }
+    })
   }
   const deleteCollection = () => {
     chrome.runtime.sendMessage({ type: 'delete collection', payload: { keys: [collections[menuSelected.current].id] } })
@@ -231,6 +243,15 @@ function Home(props) {
               Open all tabs in a new group
             </MenuItem>
           )}
+          {showOpenInNewTabMenuItem && (
+            <MenuItem className="list-text" onClick={replaceCurrentGroup}>
+              <ListItemIcon className="list-icon-root">
+                <SwapCallsIcon className="list-icon" />
+              </ListItemIcon>
+              Replace current group
+            </MenuItem>
+          )}
+          {showOpenAllTabsMenuItem && <Divider />}
           <MenuItem className="list-text" onClick={deleteCollection}>
             <ListItemIcon className="list-icon-root">
               <DeleteOutlineOutlined className="list-icon" />
