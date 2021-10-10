@@ -1,7 +1,7 @@
 export const DB_STORE_NAME = 'Collections'
 let db
 
-export function connectDB(cb) {
+export function connectDB() {
   // In the following line, you should include the prefixes of implementations you want to test.
   if (!self.indexedDB) {
     self.indexedDB = self.mozIndexedDB || self.webkitIndexedDB || self.msIndexedDB
@@ -15,29 +15,32 @@ export function connectDB(cb) {
     throw new Error("Your browser doesn't support a stable version of IndexedDB. Such and such feature will not be available.")
   }
 
-  const openRequest = self.indexedDB.open('TabsCollectionIDB', 2)
+  return new Promise((resolve, reject) => {
+    const openRequest = self.indexedDB.open('TabsCollectionIDB', 2)
 
-  openRequest.onsuccess = function (event) {
-    db = openRequest.result
-    cb(db)
-    console.log('Connected to DB.')
-  }
+    openRequest.onsuccess = function (event) {
+      const db = openRequest.result
+      console.log('Connected to DB.')
+      resolve(db)
+    }
 
-  openRequest.onerror = function () {
-    console.error(openRequest.errorCode)
-  }
+    openRequest.onerror = function () {
+      console.error(openRequest.errorCode)
+      reject(openRequest.error)
+    }
 
-  openRequest.onupgradeneeded = function (event) {
-    db = event.target.result
-    db.createObjectStore(DB_STORE_NAME, { keyPath: 'id', autoIncrement: true })
-    cb(db)
-    console.log('Object store created.')
-  }
+    openRequest.onupgradeneeded = function (event) {
+      const db = event.target.result
+      db.createObjectStore(DB_STORE_NAME, { keyPath: 'id', autoIncrement: true })
+      console.log('Object store created.')
+      resolve(db)
+    }
+  })
 }
 
-export function getDB() {
+export async function getDB() {
   if (!db) {
-    throw Error('DB not opened yet.')
+    db = await connectDB()
   }
   return db
 }
