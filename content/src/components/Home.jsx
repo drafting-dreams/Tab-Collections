@@ -18,21 +18,6 @@ import SwapCallsIcon from '@material-ui/icons/SwapCalls'
 const CHROME_VERSION = /Chrome\/(\d+)/.exec(navigator.userAgent) ? Number(/Chrome\/(\d+)/.exec(navigator.userAgent)[1]) : 0
 const ENABLE_GROUP_TAB_FEATURE = CHROME_VERSION >= 89
 
-function createCollection(setLocation) {
-  chrome.runtime.sendMessage(
-    {
-      type: 'add collection',
-      payload: {
-        title: 'New Collections',
-        list: [],
-      },
-    },
-    response => {
-      setLocation(`/collection/${response}`)
-    }
-  )
-}
-
 function Home(props) {
   const { setLocation } = useContext(RouteContext)
   const [collections, setCollections] = useState([])
@@ -48,6 +33,21 @@ function Home(props) {
       setCollections(response)
     })
   }, [])
+
+  const createCollection = () => {
+    chrome.runtime.sendMessage(
+      {
+        type: 'add collection',
+        payload: {
+          title: 'New Collections',
+          list: [],
+        },
+      },
+      response => {
+        setLocation(`/collection/${response}`)
+      }
+    )
+  }
 
   const openMoreOptionsMenu = event => {
     const position = event.currentTarget.getBoundingClientRect()
@@ -133,7 +133,7 @@ function Home(props) {
             component="button"
             color="primary"
             onClick={() => {
-              createCollection(setLocation)
+              createCollection()
             }}
           >
             <AddSharpIcon className="icon-add" />
