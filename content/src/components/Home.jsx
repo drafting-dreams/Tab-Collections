@@ -16,7 +16,9 @@ import {
   DialogTitle,
   Button,
   TextField,
+  Snackbar,
 } from '@material-ui/core'
+import Alert from '@material-ui/lab/Alert'
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@material-ui/icons/CheckBox'
 import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
@@ -31,10 +33,36 @@ import SwapCallsIcon from '@material-ui/icons/SwapCalls'
 import TransformOutlinedIcon from '@material-ui/icons/TransformOutlined'
 
 import { makeStyles } from '@material-ui/styles'
-
-const useStyles = makeStyles({
+const useDialogStyles = makeStyles({
   paper: {
     width: '400px',
+  },
+})
+const useToastStyles = makeStyles({
+  root: {
+    position: 'fixed !important',
+  },
+})
+const useAlertStyles = makeStyles({
+  root: {
+    display: 'flex !important',
+    padding: '6px 16px !important',
+    fontSize: '0.875rem !important',
+    fontWeight: '400 !important',
+    lineHeight: '1.43 !important',
+  },
+  icon: {
+    display: 'flex !important',
+    padding: '4px 0 !important',
+    fontSize: '18px !important',
+    marginRight: '12px !important',
+    '& *': {
+      fontSize: '18px !important',
+    },
+  },
+  message: {
+    padding: '4px 0 !important',
+    fontSize: '14px !important',
   },
 })
 
@@ -92,21 +120,20 @@ function Home(props) {
     )
   }
 
-  const openMoreOptionsMenu = event => {
-    const position = event.currentTarget.getBoundingClientRect()
-    setMoreClickPosition({ x: position.left, y: position.bottom })
+  // Toast
+  const [toast, setToast] = useState('')
+  const [displayToast, setDisplayToast] = useState(false)
+  const handleToastClose = () => {
+    setDisplayToast(false)
+    setTimeout(() => {
+      setToast('')
+    }, 300)
   }
-  const closeMoreOptionsMenu = () => {
-    setMoreClickPosition(null)
-  }
+  useEffect(() => {
+    if (toast) setDisplayToast(true)
+  }, [toast])
 
-  const createCollectionWithGroup = () => {
-    chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
-      const { groupId } = response
-      chrome.runtime.sendMessage({ type: 'create collection using a group', payload: { groupId } })
-    })
-  }
-
+  // Dialog
   const dialogInputRef = useRef()
   const [dialogState, dialogDispatch] = useReducer(dialogReducer, dialogInitialState)
   const handleDialogClose = () => {
@@ -120,6 +147,33 @@ function Home(props) {
       chrome.runtime.sendMessage({ type: dialogState.type, payload: dialogState })
     }
     dialogDispatch({ type: 'close' })
+  }
+
+  // MoreOptionsMenu
+  const openMoreOptionsMenu = event => {
+    const position = event.currentTarget.getBoundingClientRect()
+    setMoreClickPosition({ x: position.left, y: position.bottom })
+  }
+  const closeMoreOptionsMenu = () => {
+    setMoreClickPosition(null)
+  }
+  const createCollectionWithSurroundings = () => {
+    closeMoreOptionsMenu()
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
+      if (response.pinned) {
+        setToast("Can't group a pinned tab")
+      } else if (response.groupId >= 0) {
+        setToast('Current tab is already in a group')
+      } else {
+        dialogDispatch({ type: 'create collection with surroundings' })
+      }
+    })
+  }
+  const createCollectionWithGroup = () => {
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
+      const { groupId } = response
+      chrome.runtime.sendMessage({ type: 'create collection using a group', payload: { groupId } })
+    })
   }
 
   const handleRightClick = (index, event) => {
@@ -217,13 +271,7 @@ function Home(props) {
             open={moreClickPosition !== null}
             onClose={closeMoreOptionsMenu}
           >
-            <MenuItem
-              className="list-text"
-              onClick={() => {
-                dialogDispatch({ type: 'create collection with surroundings' })
-                closeMoreOptionsMenu()
-              }}
-            >
+            <MenuItem className="list-text" onClick={createCollectionWithSurroundings}>
               <ListItemIcon className="list-icon-root">
                 <TransformOutlinedIcon className="list-icon" />
               </ListItemIcon>
@@ -337,7 +385,7 @@ function Home(props) {
           </MenuItem>
         </Menu>
       </div>
-      <Dialog classes={useStyles()} open={!!dialogState} onClose={handleDialogClose}>
+      <Dialog classes={useDialogStyles()} open={!!dialogState} onClose={handleDialogClose}>
         <DialogTitle onClose={handleDialogClose}>Input Group Name</DialogTitle>
         <DialogContent>
           <TextField
@@ -360,6 +408,17 @@ function Home(props) {
           </Button>
         </DialogActions>
       </Dialog>
+      <Snackbar
+        open={displayToast}
+        autoHideDuration={3000}
+        classes={useToastStyles()}
+        onClose={handleToastClose}
+        anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
+      >
+        <Alert classes={useAlertStyles()} severity="warning" variant="filled">
+          {toast}
+        </Alert>
+      </Snackbar>
     </div>
   )
 }
