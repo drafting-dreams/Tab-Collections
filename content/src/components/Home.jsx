@@ -2,6 +2,8 @@ import React, { useContext, useEffect, useState, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
 import { Paper, Link, Menu, MenuItem, ListItemIcon, Checkbox, Tooltip, Divider } from '@material-ui/core'
+import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank'
+import CheckBoxIcon from '@material-ui/icons/CheckBox'
 import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
 import AddSharpIcon from '@material-ui/icons/AddSharp'
 import DeleteOutlineOutlined from '@material-ui/icons/DeleteOutlineOutlined'
@@ -207,7 +209,12 @@ function Home(props) {
                   checkOn(idx)
                 }}
               >
-                <Checkbox color="primary" checked={selected} />
+                <Checkbox
+                  color="primary"
+                  checked={selected}
+                  icon={<CheckBoxOutlineBlankIcon style={{ fontSize: 18 }} />}
+                  checkedIcon={<CheckBoxIcon style={{ fontSize: 18 }} />}
+                />
               </div>
             </Paper>
           )
