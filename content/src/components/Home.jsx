@@ -1,7 +1,22 @@
-import React, { useContext, useEffect, useState, useRef } from 'react'
+import React, { useContext, useEffect, useState, useRef, useReducer } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
-import { Paper, Link, Menu, MenuItem, ListItemIcon, Checkbox, Tooltip, Divider } from '@material-ui/core'
+import {
+  Paper,
+  Link,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  Checkbox,
+  Tooltip,
+  Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Button,
+  TextField,
+} from '@material-ui/core'
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@material-ui/icons/CheckBox'
 import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
@@ -13,12 +28,38 @@ import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
 import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
 import PostAddOutlinedIcon from '@material-ui/icons/PostAddOutlined'
 import SwapCallsIcon from '@material-ui/icons/SwapCalls'
+import TransformOutlinedIcon from '@material-ui/icons/TransformOutlined'
+
+import { makeStyles } from '@material-ui/styles'
+
+const useStyles = makeStyles({
+  paper: {
+    width: '400px',
+  },
+})
 
 // Edge Browser also has this chrome info in its useragent,
 // So here I only use the Chrome version.
 // Note: chrome.tabGroups API is only available with Chrome89+ and Manifest V3+
 const CHROME_VERSION = /Chrome\/(\d+)/.exec(navigator.userAgent) ? Number(/Chrome\/(\d+)/.exec(navigator.userAgent)[1]) : 0
 const ENABLE_GROUP_TAB_FEATURE = CHROME_VERSION >= 89
+
+const NEW_COLLECTIONS = 'New Collections'
+
+const dialogInitialState = null
+function dialogReducer(state, action) {
+  const { type, groupName } = action
+  switch (action.type) {
+    case 'close':
+      return null
+    case 'create collection with surroundings':
+      return { type, groupName: NEW_COLLECTIONS }
+    case 'input':
+      return { ...state, groupName }
+    default:
+      return null
+  }
+}
 
 function Home(props) {
   const { setLocation } = useContext(RouteContext)
@@ -41,7 +82,7 @@ function Home(props) {
       {
         type: 'add collection',
         payload: {
-          title: 'New Collections',
+          title: NEW_COLLECTIONS,
           list: [],
         },
       },
@@ -55,11 +96,30 @@ function Home(props) {
     const position = event.currentTarget.getBoundingClientRect()
     setMoreClickPosition({ x: position.left, y: position.bottom })
   }
+  const closeMoreOptionsMenu = () => {
+    setMoreClickPosition(null)
+  }
+
   const createCollectionWithGroup = () => {
     chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
       const { groupId } = response
       chrome.runtime.sendMessage({ type: 'create collection using a group', payload: { groupId } })
     })
+  }
+
+  const dialogInputRef = useRef()
+  const [dialogState, dialogDispatch] = useReducer(dialogReducer, dialogInitialState)
+  const handleDialogClose = () => {
+    dialogDispatch({ type: 'close' })
+  }
+  const handleDialogInput = e => {
+    dialogDispatch({ type: 'input', groupName: e.currentTarget.value })
+  }
+  const handleSubmit = () => {
+    if (dialogState?.type === 'create collection with surroundings') {
+      chrome.runtime.sendMessage({ type: dialogState.type, payload: dialogState })
+    }
+    dialogDispatch({ type: 'close' })
   }
 
   const handleRightClick = (index, event) => {
@@ -155,10 +215,20 @@ function Home(props) {
             anchorPosition={moreClickPosition ? { left: moreClickPosition.x - 300, top: moreClickPosition.y } : undefined}
             keepMounted
             open={moreClickPosition !== null}
-            onClose={() => {
-              setMoreClickPosition(null)
-            }}
+            onClose={closeMoreOptionsMenu}
           >
+            <MenuItem
+              className="list-text"
+              onClick={() => {
+                dialogDispatch({ type: 'create collection with surroundings' })
+                closeMoreOptionsMenu()
+              }}
+            >
+              <ListItemIcon className="list-icon-root">
+                <TransformOutlinedIcon className="list-icon" />
+              </ListItemIcon>
+              Group surroundings into a collection
+            </MenuItem>
             <MenuItem className="list-text" onClick={createCollectionWithGroup}>
               <ListItemIcon className="list-icon-root">
                 <PostAddOutlinedIcon className="list-icon" />
@@ -267,6 +337,29 @@ function Home(props) {
           </MenuItem>
         </Menu>
       </div>
+      <Dialog classes={useStyles()} open={!!dialogState} onClose={handleDialogClose}>
+        <DialogTitle onClose={handleDialogClose}>Input Group Name</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            inputRef={dialogInputRef}
+            value={dialogState?.groupName || ''}
+            onChange={handleDialogInput}
+            onFocus={() => {
+              requestAnimationFrame(() => {
+                dialogInputRef.current.select()
+              })
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose}>Cancel</Button>
+          <Button variant="contained" color="primary" onClick={handleSubmit}>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }

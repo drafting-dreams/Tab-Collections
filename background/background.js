@@ -60,8 +60,11 @@ chrome.action.onClicked.addListener(function (tab) {
 })
 
 async function handleMessage(request, sender) {
+  const TITLE_PLACEHOLDER = 'New Collections'
   let response
   const db = await getDB()
+
+  const mapTabToCollection = tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })
 
   switch (request.type) {
     case 'ask if pinned': {
@@ -148,8 +151,37 @@ async function handleMessage(request, sender) {
       break
     }
 
+    case 'create collection with surroundings': {
+      if (sender.tab.pinned) {
+        response = "Can't group a pinned tab"
+      } else if (sender.tab.groupId >= 0) {
+        response = 'Current tab is already in a group'
+      } else {
+        const allTabs = await chrome.tabs.query({ currentWindow: true })
+        const senderTabIndex = allTabs.findIndex(tab => tab.id === sender.tab.id)
+
+        let i, j
+        i = j = senderTabIndex
+        while (i >= 0 && !allTabs[i].pinned && allTabs[i].groupId < 0) {
+          i--
+        }
+        while (j < allTabs.length && !allTabs[j].pinned && allTabs[j].groupId < 0) {
+          j++
+        }
+        const toBeGrouped = allTabs.slice(i + 1, j)
+        const title = request.payload.groupName || TITLE_PLACEHOLDER
+        chrome.tabs.group({ tabIds: toBeGrouped.map(tab => tab.id) }).then(groupId => {
+          chrome.tabGroups.update(groupId, { title })
+        })
+        await query.add(db, {
+          title,
+          list: toBeGrouped.map(mapTabToCollection),
+        })
+        reloadExtensionContent({ excludeSelf: false })
+      }
+      break
+    }
     case 'create collection using a group': {
-      const TITLE_PLACEHOLDER = 'New Collections'
       const {
         payload: { groupId },
       } = request
@@ -160,9 +192,7 @@ async function handleMessage(request, sender) {
           query
             .add(db, {
               title: groupInfo.title.trim() ? groupInfo.title : TITLE_PLACEHOLDER,
-              list: tabsInfo
-                .filter(tab => tab.groupId === groupId)
-                .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
+              list: tabsInfo.filter(tab => tab.groupId === groupId).map(mapTabToCollection),
             })
             .then(() => {
               reloadExtensionContent({ excludeSelf: false })
@@ -170,11 +200,9 @@ async function handleMessage(request, sender) {
         })
       } else {
         const tab = sender.tab
-        query
-          .add(db, { title: TITLE_PLACEHOLDER, list: [{ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] }] })
-          .then(() => {
-            reloadExtensionContent({ excludeSelf: false })
-          })
+        query.add(db, { title: TITLE_PLACEHOLDER, list: [mapTabToCollection(tab)] }).then(() => {
+          reloadExtensionContent({ excludeSelf: false })
+        })
       }
       break
     }
