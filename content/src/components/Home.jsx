@@ -32,39 +32,7 @@ import PostAddOutlinedIcon from '@material-ui/icons/PostAddOutlined'
 import SwapCallsIcon from '@material-ui/icons/SwapCalls'
 import TransformOutlinedIcon from '@material-ui/icons/TransformOutlined'
 
-import { makeStyles } from '@material-ui/styles'
-const useDialogStyles = makeStyles({
-  paper: {
-    width: '400px',
-  },
-})
-const useToastStyles = makeStyles({
-  root: {
-    position: 'fixed !important',
-  },
-})
-const useAlertStyles = makeStyles({
-  root: {
-    display: 'flex !important',
-    padding: '6px 16px !important',
-    fontSize: '0.875rem !important',
-    fontWeight: '400 !important',
-    lineHeight: '1.43 !important',
-  },
-  icon: {
-    display: 'flex !important',
-    padding: '4px 0 !important',
-    fontSize: '18px !important',
-    marginRight: '12px !important',
-    '& *': {
-      fontSize: '18px !important',
-    },
-  },
-  message: {
-    padding: '4px 0 !important',
-    fontSize: '14px !important',
-  },
-})
+import { useDialogStyles, useToastStyles, useAlertStyles } from '../styles/madeStyles'
 
 // Edge Browser also has this chrome info in its useragent,
 // So here I only use the Chrome version.
