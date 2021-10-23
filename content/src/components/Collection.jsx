@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
-import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip, Checkbox } from '@material-ui/core'
+import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip, Checkbox, Snackbar, Alert } from '@material-ui/core'
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@material-ui/icons/CheckBox'
 import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
@@ -14,7 +14,12 @@ import OpenInBrowserOutlinedIcon from '@material-ui/icons/OpenInBrowserOutlined'
 import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
 import LibraryAddOutlinedIcon from '@material-ui/icons/LibraryAddOutlined'
 import LinkOutlinedIcon from '@material-ui/icons/LinkOutlined'
+
+import useToast from '../hooks/useToast'
+
 import { copy } from '../../../utils'
+
+import { useAlertStyles, useToastStyles } from '../style/madeStyles'
 
 function goBack(setLocation) {
   setLocation('/')
@@ -43,6 +48,8 @@ function Collection(props) {
       pending.current = false
     })
   }, [id])
+
+  const { toast, setToast, displayToast, handleToastClose } = useToast()
 
   const updateCollection = payload => {
     if (!pending.current) chrome.runtime.sendMessage({ type: 'update collection', payload })
@@ -320,6 +327,11 @@ function Collection(props) {
           </MenuItem>
         </Menu>
       </div>
+      <Snackbar autoHideDuration={3000} classes={useToastStyles()} anchorOrigin={{ horizontal: 'right', vertical: 'top' }}>
+        <Alert classes={useAlertStyles()} severity="warning">
+          {toast}
+        </Alert>
+      </Snackbar>
     </div>
   )
 }
