@@ -13,6 +13,7 @@ export const useToastStyles = makeStyles({
 export const useAlertStyles = makeStyles({
   root: {
     display: 'flex !important',
+    flexDirection: 'row !important',
     padding: '6px 16px !important',
     fontSize: '0.875rem !important',
     fontWeight: '400 !important',

@@ -373,7 +373,7 @@ function Home(props) {
         autoHideDuration={3000}
         classes={useToastStyles()}
         onClose={handleToastClose}
-        anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'center', vertical: 'top' }}
       >
         <Alert classes={useAlertStyles()} severity="warning" variant="filled">
           {toast}

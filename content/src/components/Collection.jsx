@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useContext, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
-import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip, Checkbox, Snackbar, Alert } from '@material-ui/core'
+import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip, Checkbox, Snackbar } from '@material-ui/core'
+import Alert from '@material-ui/lab/Alert'
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@material-ui/icons/CheckBox'
 import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
@@ -19,7 +20,7 @@ import useToast from '../hooks/useToast'
 
 import { copy } from '../../../utils'
 
-import { useAlertStyles, useToastStyles } from '../style/madeStyles'
+import { useAlertStyles, useToastStyles } from '../styles/madeStyles'
 
 function goBack(setLocation) {
   setLocation('/')
@@ -72,7 +73,20 @@ function Collection(props) {
   }
   useEffect(() => {
     if (prevList.current !== null && list.length !== prevList.current.length) {
-      updateCollection({ title, list, id: Number(id) })
+      const urlSet = new Set()
+      const deDuplicatedList = list.filter(tab => {
+        if (urlSet.has(tab.url)) {
+          return false
+        }
+        urlSet.add(tab.url)
+        return true
+      })
+      if (deDuplicatedList.length === list.length) {
+        updateCollection({ title, list, id: Number(id) })
+      } else {
+        setToast("Tabs with duplicated urls won't be added to the collection")
+        setList(deDuplicatedList)
+      }
     }
   }, [list])
   useEffect(() => {
@@ -327,8 +341,14 @@ function Collection(props) {
           </MenuItem>
         </Menu>
       </div>
-      <Snackbar autoHideDuration={3000} classes={useToastStyles()} anchorOrigin={{ horizontal: 'right', vertical: 'top' }}>
-        <Alert classes={useAlertStyles()} severity="warning">
+      <Snackbar
+        open={displayToast}
+        autoHideDuration={3000}
+        classes={useToastStyles()}
+        onClose={handleToastClose}
+        anchorOrigin={{ horizontal: 'center', vertical: 'top' }}
+      >
+        <Alert classes={useAlertStyles()} severity="warning" variant="filled">
           {toast}
         </Alert>
       </Snackbar>
