@@ -32,6 +32,8 @@ import PostAddOutlinedIcon from '@material-ui/icons/PostAddOutlined'
 import SwapCallsIcon from '@material-ui/icons/SwapCalls'
 import TransformOutlinedIcon from '@material-ui/icons/TransformOutlined'
 
+import useToast from '../hooks/useToast'
+
 import { useDialogStyles, useToastStyles, useAlertStyles } from '../styles/madeStyles'
 
 // Edge Browser also has this chrome info in its useragent,
@@ -89,17 +91,7 @@ function Home(props) {
   }
 
   // Toast
-  const [toast, setToast] = useState('')
-  const [displayToast, setDisplayToast] = useState(false)
-  const handleToastClose = () => {
-    setDisplayToast(false)
-    setTimeout(() => {
-      setToast('')
-    }, 300)
-  }
-  useEffect(() => {
-    if (toast) setDisplayToast(true)
-  }, [toast])
+  const { toast, setToast, displayToast, handleToastClose } = useToast()
 
   // Dialog
   const dialogInputRef = useRef()
