@@ -16,9 +16,12 @@ import {
   MoreHorizOutlined as MoreHorizOutlinedIcon,
   LibraryAddOutlined as LibraryAddOutlinedIcon,
   LinkOutlined as LinkOutlinedIcon,
+  FolderOpenOutlined as FolderOpenOutlinedIcon,
+  SwapCalls as SwapCallsIcon,
 } from '@material-ui/icons'
 
 import useToast from '../hooks/useToast'
+import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
 
 import { copy } from '../utils'
 
@@ -133,6 +136,21 @@ function Collection(props) {
     window.location.href = list[menuSelected.current].url
     setRightClickPosition(null)
   }
+  const openTabsInAGroup = () => {
+    chrome.runtime.sendMessage({ type: 'open tabs in a group', payload: { title, list } })
+    setMoreClickPosition(null)
+  }
+  const replaceCurrentGroup = () => {
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
+      const { groupId } = response
+      if (typeof groupId === 'number' && groupId >= 0) {
+        chrome.runtime.sendMessage({ type: 'replace current group', payload: { groupId, collection: { title, list } } })
+        setMoreClickPosition(null)
+      } else {
+        openTabsInAGroup()
+      }
+    })
+  }
   const openAllInNewTab = () => {
     list.forEach(item => {
       window.open(item.url)
@@ -175,6 +193,8 @@ function Collection(props) {
     setRightClickPosition(null)
   }
 
+  const showGroupTabFeatures = ENABLE_GROUP_TAB_FEATURE && !!list?.length
+
   return (
     <div className="tab-collections-container">
       <div className="head">
@@ -209,9 +229,6 @@ function Collection(props) {
             <span className="button-text">Add Current Tab</span>
           </Link>
         </div>
-        <Tooltip title="Add all tabs" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
-          <AddBoxOutlinedIcon className="icon icon-add-all" onClick={addAllTabs()} />
-        </Tooltip>
         <Tooltip title="More options" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400} onClick={openMoreOptionsMenu}>
           {/* <OpenInBrowserOutlinedIcon className="icon icon-open-all" onClick={openAllInNewTab} /> */}
           <MoreHorizOutlinedIcon className="icon icon-more" />
@@ -220,7 +237,9 @@ function Collection(props) {
           container={document.querySelector('.tab-collections-react-root')}
           autoFocus={false}
           anchorReference="anchorPosition"
-          anchorPosition={moreClickPosition ? { left: moreClickPosition.x - 200, top: moreClickPosition.y } : undefined}
+          anchorPosition={
+            moreClickPosition ? { left: moreClickPosition.x - (showGroupTabFeatures ? 240 : 190), top: moreClickPosition.y } : undefined
+          }
           keepMounted
           open={moreClickPosition !== null}
           onClose={() => {
@@ -233,18 +252,41 @@ function Collection(props) {
             </ListItemIcon>
             Add all unpinned tabs
           </MenuItem>
+          <MenuItem className="list-text" onClick={addAllTabs()}>
+            <ListItemIcon className="list-icon-root">
+              <AddBoxOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Add all tabs
+          </MenuItem>
+          <Divider />
+          {showGroupTabFeatures && (
+            <MenuItem className="list-text" onClick={openTabsInAGroup}>
+              <ListItemIcon className="list-icon-root">
+                <FolderOpenOutlinedIcon className="list-icon" />
+              </ListItemIcon>
+              Open all tabs in a new group
+            </MenuItem>
+          )}
+          {showGroupTabFeatures && (
+            <MenuItem className="list-text" onClick={replaceCurrentGroup}>
+              <ListItemIcon className="list-icon-root">
+                <SwapCallsIcon className="list-icon" />
+              </ListItemIcon>
+              Replace current group
+            </MenuItem>
+          )}
+          <MenuItem className="list-text" onClick={openAllInNewTab}>
+            <ListItemIcon className="list-icon-root">
+              <OpenInBrowserOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Open all tabs
+          </MenuItem>
+          <Divider />
           <MenuItem className="list-text" onClick={deleteAll}>
             <ListItemIcon className="list-icon-root">
               <DeleteOutlineOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Delete all tabs
-          </MenuItem>
-          <Divider />
-          <MenuItem className="list-text" onClick={openAllInNewTab}>
-            <ListItemIcon className="list-icon-root">
-              <OpenInBrowserOutlinedIcon className="list-icon" />
-            </ListItemIcon>
-            Open all in new tabs
           </MenuItem>
         </Menu>
         <Paper className="selected-tip" style={{ display: selectedList.length ? 'flex' : 'none' }}>
