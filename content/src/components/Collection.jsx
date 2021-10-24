@@ -78,19 +78,31 @@ function Collection(props) {
   }
   useEffect(() => {
     if (prevList.current !== null && list.length !== prevList.current.length) {
+      let toastMessage = ''
+      const chromeFilteredOutList = list.filter(tab => {
+        return !tab.url.startsWith('chrome://')
+      })
+      if (chromeFilteredOutList.length !== list.length) {
+        toastMessage = "Internal chrome tabs can't be added"
+      }
+
       const urlSet = new Set()
-      const deDuplicatedList = list.filter(tab => {
+      const deDuplicatedList = chromeFilteredOutList.filter(tab => {
         if (urlSet.has(tab.url)) {
           return false
         }
         urlSet.add(tab.url)
         return true
       })
-      if (deDuplicatedList.length === list.length) {
-        updateCollection({ title, list, id: Number(id) })
-      } else {
-        setToast("Tabs with duplicated urls won't be added to the collection")
+      if (deDuplicatedList.length !== chromeFilteredOutList.length) {
+        toastMessage = "Tabs with duplicated urls won't be added to the collection"
+      }
+
+      if (toastMessage) {
+        setToast(toastMessage)
         setList(deDuplicatedList)
+      } else {
+        updateCollection({ title, list, id: Number(id) })
       }
     }
   }, [list])
@@ -170,12 +182,7 @@ function Collection(props) {
   }
   const addAllTabs = unpinned => () => {
     chrome.runtime.sendMessage({ type: 'get tabs info', payload: { unpinned } }, function (response) {
-      setList([
-        ...list,
-        ...response
-          .filter(tab => /^(http|https)/.test(tab.url))
-          .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
-      ])
+      setList([...list, ...response.map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] }))])
       setMoreClickPosition(null)
     })
   }
