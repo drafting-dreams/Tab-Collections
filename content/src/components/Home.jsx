@@ -36,7 +36,7 @@ import {
 import useToast from '../hooks/useToast'
 import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
 
-import { useDialogStyles, useToastStyles, useAlertStyles } from '../styles/madeStyles'
+import { useDialogStyles, useDialogActionsStyles, useToastStyles, useAlertStyles } from '../styles/madeStyles'
 
 const NEW_COLLECTIONS = 'New Collections'
 
@@ -357,7 +357,7 @@ function Home(props) {
             }}
           />
         </DialogContent>
-        <DialogActions>
+        <DialogActions classes={useDialogActionsStyles()}>
           <Button onClick={handleDialogClose}>Cancel</Button>
           <Button variant="contained" color="primary" onClick={handleSubmit}>
             Confirm

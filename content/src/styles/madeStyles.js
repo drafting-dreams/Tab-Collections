@@ -5,6 +5,11 @@ export const useDialogStyles = makeStyles({
     width: '400px',
   },
 })
+export const useDialogActionsStyles = makeStyles({
+  root: {
+    flexDirection: 'row !important',
+  },
+})
 export const useToastStyles = makeStyles({
   root: {
     position: 'fixed !important',
