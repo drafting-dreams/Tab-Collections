@@ -20,7 +20,7 @@ import {
 
 import useToast from '../hooks/useToast'
 
-import { copy } from '../../../utils'
+import { copy } from '../utils'
 
 import { useAlertStyles, useToastStyles } from '../styles/madeStyles'
 

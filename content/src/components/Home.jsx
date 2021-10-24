@@ -34,14 +34,9 @@ import {
 } from '@material-ui/icons'
 
 import useToast from '../hooks/useToast'
+import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
 
 import { useDialogStyles, useToastStyles, useAlertStyles } from '../styles/madeStyles'
-
-// Edge Browser also has this chrome info in its useragent,
-// So here I only use the Chrome version.
-// Note: chrome.tabGroups API is only available with Chrome89+ and Manifest V3+
-const CHROME_VERSION = /Chrome\/(\d+)/.exec(navigator.userAgent) ? Number(/Chrome\/(\d+)/.exec(navigator.userAgent)[1]) : 0
-const ENABLE_GROUP_TAB_FEATURE = CHROME_VERSION >= 89
 
 const NEW_COLLECTIONS = 'New Collections'
 
