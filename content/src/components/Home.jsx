@@ -19,18 +19,19 @@ import {
   Snackbar,
 } from '@material-ui/core'
 import Alert from '@material-ui/lab/Alert'
-import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank'
-import CheckBoxIcon from '@material-ui/icons/CheckBox'
-import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
-import AddSharpIcon from '@material-ui/icons/AddSharp'
-import DeleteOutlineOutlined from '@material-ui/icons/DeleteOutlineOutlined'
-import OpenInBrowserOutlinedIcon from '@material-ui/icons/OpenInBrowserOutlined'
-import FolderOpenOutlinedIcon from '@material-ui/icons/FolderOpenOutlined'
-import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
-import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
-import PostAddOutlinedIcon from '@material-ui/icons/PostAddOutlined'
-import SwapCallsIcon from '@material-ui/icons/SwapCalls'
-import TransformOutlinedIcon from '@material-ui/icons/TransformOutlined'
+import {
+  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+  CheckBox as CheckBoxIcon,
+  CloseOutlined as CloseSharpIcon,
+  AddSharp as AddSharpIcon,
+  DeleteOutlineOutlined as DeleteOutlineOutlinedIcon,
+  OpenInBrowserOutlined as OpenInBrowserOutlinedIcon,
+  FolderOpenOutlined as FolderOpenOutlinedIcon,
+  MoreHorizOutlined as MoreHorizOutlinedIcon,
+  PostAddOutlined as PostAddOutlinedIcon,
+  SwapCalls as SwapCallsIcon,
+  TransformOutlined as TransformOutlinedIcon,
+} from '@material-ui/icons'
 
 import useToast from '../hooks/useToast'
 
@@ -339,7 +340,7 @@ function Home(props) {
           {showOpenAllTabsMenuItem && <Divider />}
           <MenuItem className="list-text" onClick={deleteCollection}>
             <ListItemIcon className="list-icon-root">
-              <DeleteOutlineOutlined className="list-icon" />
+              <DeleteOutlineOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Delete
           </MenuItem>

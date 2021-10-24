@@ -3,18 +3,20 @@ import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
 import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip, Checkbox, Snackbar } from '@material-ui/core'
 import Alert from '@material-ui/lab/Alert'
-import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank'
-import CheckBoxIcon from '@material-ui/icons/CheckBox'
-import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
-import AddSharpIcon from '@material-ui/icons/AddSharp'
-import ArrowBackIosOutlinedIcon from '@material-ui/icons/ArrowBackIosOutlined'
-import InsertDriveFileOutlinedIcon from '@material-ui/icons/InsertDriveFileOutlined'
-import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
-import AddBoxOutlinedIcon from '@material-ui/icons/AddBoxOutlined'
-import OpenInBrowserOutlinedIcon from '@material-ui/icons/OpenInBrowserOutlined'
-import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
-import LibraryAddOutlinedIcon from '@material-ui/icons/LibraryAddOutlined'
-import LinkOutlinedIcon from '@material-ui/icons/LinkOutlined'
+import {
+  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+  CheckBox as CheckBoxIcon,
+  CloseOutlined as CloseSharpIcon,
+  AddSharp as AddSharpIcon,
+  ArrowBackIosOutlined as ArrowBackIosOutlinedIcon,
+  InsertDriveFileOutlined as InsertDriveFileOutlinedIcon,
+  DeleteOutlineOutlined as DeleteOutlineOutlinedIcon,
+  AddBoxOutlined as AddBoxOutlinedIcon,
+  OpenInBrowserOutlined as OpenInBrowserOutlinedIcon,
+  MoreHorizOutlined as MoreHorizOutlinedIcon,
+  LibraryAddOutlined as LibraryAddOutlinedIcon,
+  LinkOutlined as LinkOutlinedIcon,
+} from '@material-ui/icons'
 
 import useToast from '../hooks/useToast'
 
