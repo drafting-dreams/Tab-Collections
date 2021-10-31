@@ -1,10 +1,11 @@
 import { getDB } from './db/connect'
 import * as query from './db/transactions'
 
-import { initOnInstalled, reloadExtensionContent } from './utils'
-import { localStorage, getLocalStorage, setLocalStorage, getPinRegistry, setPinRegistry } from './utils/webStore'
+import { initOnInstalled, reloadExtensionContent, registerTabUpdateEvent } from './utils'
+import { getLocalStorage, setLocalStorage, getPinRegistry, setPinRegistry } from './utils/webStore'
 
 initOnInstalled()
+registerTabUpdateEvent()
 
 chrome.action.onClicked.addListener(function (tab) {
   chrome.tabs.sendMessage(tab.id, {
@@ -200,27 +201,4 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
   // return true indicates that this event listener will response asynchronously
   return true
-})
-
-// Tell the tab whether the extension has been pinned on the page, when the tab is activated, refreshed or created
-function updateHandler(tabId) {
-  localStorage.get(['pinned', 'location'], ({ pinned, location }) => {
-    chrome.tabs.sendMessage(tabId, {
-      type: 'activeInfo',
-      payload: { pinned },
-    })
-    chrome.tabs.sendMessage(tabId, {
-      type: 'route change',
-      payload: { route: location },
-    })
-  })
-}
-chrome.tabs.onActivated.addListener(activeInfo => {
-  updateHandler(activeInfo.tabId)
-})
-
-chrome.tabs.onUpdated.addListener(updateHandler)
-
-chrome.tabs.onCreated.addListener(tab => {
-  updateHandler(tab.id)
 })
