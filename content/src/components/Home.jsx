@@ -128,7 +128,9 @@ function Home(props) {
   const createCollectionWithGroup = () => {
     chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
       const { groupId } = response
-      chrome.runtime.sendMessage({ type: 'create collection using a group', payload: { groupId } })
+      chrome.runtime.sendMessage({ type: 'create collection using a group', payload: { groupId } }, response => {
+        setToast(response)
+      })
     })
   }
 
