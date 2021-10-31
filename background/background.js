@@ -1,7 +1,7 @@
 import { getDB } from './db/connect'
 import * as query from './db/transactions'
 
-import { initOnInstalled, reloadExtensionContent, registerTabUpdateEvent } from './utils'
+import { initOnInstalled, reloadExtensionContent, registerTabUpdateEvent, filterChromeProtocol } from './utils'
 import { getLocalStorage, setLocalStorage, getPinRegistry, setPinRegistry } from './utils/webStore'
 
 initOnInstalled()
@@ -142,16 +142,17 @@ async function handleMessage(request, sender) {
       if (typeof groupId === 'number' && groupId >= 0) {
         const groupInfoPromise = chrome.tabGroups.get(groupId)
         const tabsInfoPromise = chrome.tabs.query({ currentWindow: true })
-        Promise.all([groupInfoPromise, tabsInfoPromise]).then(([groupInfo, tabsInfo]) => {
-          query
-            .add(db, {
-              title: groupInfo.title.trim() ? groupInfo.title : TITLE_PLACEHOLDER,
-              list: tabsInfo.filter(tab => tab.groupId === groupId).map(mapTabToCollection),
-            })
-            .then(() => {
-              reloadExtensionContent({ excludeSelf: false })
-            })
+        const [groupInfo, tabsInfo] = await Promise.all([groupInfoPromise, tabsInfoPromise])
+        const tabsInTheGroup = tabsInfo.filter(tab => tab.groupId === groupId)
+        const list = tabsInTheGroup.filter(filterChromeProtocol).map(mapTabToCollection)
+        await query.add(db, {
+          title: groupInfo.title.trim() ? groupInfo.title : TITLE_PLACEHOLDER,
+          list,
         })
+        reloadExtensionContent({ excludeSelf: false })
+        if (list.length < tabsInTheGroup.length) {
+          response = "Internal chrome tabs can't be added"
+        }
       } else {
         const tab = sender.tab
         query.add(db, { title: TITLE_PLACEHOLDER, list: [mapTabToCollection(tab)] }).then(() => {

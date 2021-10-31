@@ -1,5 +1,7 @@
 import { localStorage, getPinRegistry } from './webStore'
 
+export * from './utils'
+
 export function initOnInstalled() {
   // Initialization on first installation
   chrome.runtime.onInstalled.addListener(() => {
