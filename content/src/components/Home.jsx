@@ -16,9 +16,7 @@ import {
   DialogTitle,
   Button,
   TextField,
-  Snackbar,
 } from '@material-ui/core'
-import Alert from '@material-ui/lab/Alert'
 import {
   CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
   CheckBox as CheckBoxIcon,
@@ -33,10 +31,10 @@ import {
   TransformOutlined as TransformOutlinedIcon,
 } from '@material-ui/icons'
 
-import useToast from '../hooks/useToast'
 import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
 
-import { useDialogStyles, useDialogActionsStyles, useToastStyles, useAlertStyles } from '../styles/madeStyles'
+import { useDialogStyles, useDialogActionsStyles } from '../styles/madeStyles'
+import AppContext from '../context'
 
 const NEW_COLLECTIONS = 'New Collections'
 
@@ -87,7 +85,7 @@ function Home(props) {
   }
 
   // Toast
-  const { toast, setToast, displayToast, handleToastClose } = useToast()
+  const { setToast } = useContext(AppContext)
 
   // Dialog
   const dialogInputRef = useRef()
@@ -366,17 +364,6 @@ function Home(props) {
           </Button>
         </DialogActions>
       </Dialog>
-      <Snackbar
-        open={displayToast}
-        autoHideDuration={3000}
-        classes={useToastStyles()}
-        onClose={handleToastClose}
-        anchorOrigin={{ horizontal: 'center', vertical: 'top' }}
-      >
-        <Alert classes={useAlertStyles()} severity="warning" variant="filled">
-          {toast}
-        </Alert>
-      </Snackbar>
     </div>
   )
 }

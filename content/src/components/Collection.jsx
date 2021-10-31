@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useContext, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
-import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip, Checkbox, Snackbar } from '@material-ui/core'
-import Alert from '@material-ui/lab/Alert'
+import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip, Checkbox } from '@material-ui/core'
 import {
   CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
   CheckBox as CheckBoxIcon,
@@ -20,12 +19,10 @@ import {
   SwapCalls as SwapCallsIcon,
 } from '@material-ui/icons'
 
-import useToast from '../hooks/useToast'
 import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
 
 import { copy } from '../utils'
-
-import { useAlertStyles, useToastStyles } from '../styles/madeStyles'
+import AppContext from '../context'
 
 function goBack(setLocation) {
   setLocation('/')
@@ -55,7 +52,7 @@ function Collection(props) {
     })
   }, [id])
 
-  const { toast, setToast, displayToast, handleToastClose } = useToast()
+  const { setToast } = useContext(AppContext)
 
   const updateCollection = payload => {
     if (!pending.current) chrome.runtime.sendMessage({ type: 'update collection', payload })
@@ -392,17 +389,6 @@ function Collection(props) {
           </MenuItem>
         </Menu>
       </div>
-      <Snackbar
-        open={displayToast}
-        autoHideDuration={3000}
-        classes={useToastStyles()}
-        onClose={handleToastClose}
-        anchorOrigin={{ horizontal: 'center', vertical: 'top' }}
-      >
-        <Alert classes={useAlertStyles()} severity="warning" variant="filled">
-          {toast}
-        </Alert>
-      </Snackbar>
     </div>
   )
 }
