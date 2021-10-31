@@ -118,14 +118,18 @@ async function handleMessage(request, sender) {
         j++
       }
       const toBeGrouped = allTabs.slice(i + 1, j)
+      const chromeProtocolFiltered = toBeGrouped.filter(filterChromeProtocol)
       const title = request.payload.groupName || TITLE_PLACEHOLDER
-      chrome.tabs.group({ tabIds: toBeGrouped.map(tab => tab.id) }).then(groupId => {
+      chrome.tabs.group({ tabIds: chromeProtocolFiltered.map(tab => tab.id) }).then(groupId => {
         chrome.tabGroups.update(groupId, { title })
       })
       await query.add(db, {
         title,
-        list: toBeGrouped.map(mapTabToCollection),
+        list: chromeProtocolFiltered.map(mapTabToCollection),
       })
+      if (chromeProtocolFiltered.length < toBeGrouped.length) {
+        response = "Internal chrome tabs can't be added"
+      }
       reloadExtensionContent({ excludeSelf: false })
       break
     }

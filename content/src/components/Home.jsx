@@ -98,7 +98,11 @@ function Home(props) {
   }
   const handleSubmit = () => {
     if (dialogState?.type === 'create collection with surroundings') {
-      chrome.runtime.sendMessage({ type: dialogState.type, payload: dialogState })
+      chrome.runtime.sendMessage({ type: dialogState.type, payload: dialogState }, response => {
+        if (response) {
+          setToast(response)
+        }
+      })
     }
     dialogDispatch({ type: 'close' })
   }
