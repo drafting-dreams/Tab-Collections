@@ -106,33 +106,27 @@ async function handleMessage(request, sender) {
     }
 
     case 'create collection with surroundings': {
-      if (sender.tab.pinned) {
-        response = "Can't group a pinned tab"
-      } else if (sender.tab.groupId >= 0) {
-        response = 'Current tab is already in a group'
-      } else {
-        const allTabs = await chrome.tabs.query({ currentWindow: true })
-        const senderTabIndex = allTabs.findIndex(tab => tab.id === sender.tab.id)
+      const allTabs = await chrome.tabs.query({ currentWindow: true })
+      const senderTabIndex = allTabs.findIndex(tab => tab.id === sender.tab.id)
 
-        let i, j
-        i = j = senderTabIndex
-        while (i >= 0 && !allTabs[i].pinned && allTabs[i].groupId < 0) {
-          i--
-        }
-        while (j < allTabs.length && !allTabs[j].pinned && allTabs[j].groupId < 0) {
-          j++
-        }
-        const toBeGrouped = allTabs.slice(i + 1, j)
-        const title = request.payload.groupName || TITLE_PLACEHOLDER
-        chrome.tabs.group({ tabIds: toBeGrouped.map(tab => tab.id) }).then(groupId => {
-          chrome.tabGroups.update(groupId, { title })
-        })
-        await query.add(db, {
-          title,
-          list: toBeGrouped.map(mapTabToCollection),
-        })
-        reloadExtensionContent({ excludeSelf: false })
+      let i, j
+      i = j = senderTabIndex
+      while (i >= 0 && !allTabs[i].pinned && allTabs[i].groupId < 0) {
+        i--
       }
+      while (j < allTabs.length && !allTabs[j].pinned && allTabs[j].groupId < 0) {
+        j++
+      }
+      const toBeGrouped = allTabs.slice(i + 1, j)
+      const title = request.payload.groupName || TITLE_PLACEHOLDER
+      chrome.tabs.group({ tabIds: toBeGrouped.map(tab => tab.id) }).then(groupId => {
+        chrome.tabGroups.update(groupId, { title })
+      })
+      await query.add(db, {
+        title,
+        list: toBeGrouped.map(mapTabToCollection),
+      })
+      reloadExtensionContent({ excludeSelf: false })
       break
     }
     case 'create collection using a group': {
