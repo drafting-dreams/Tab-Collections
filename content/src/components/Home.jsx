@@ -372,6 +372,7 @@ function Home(props) {
                 dialogInputRef.current.select()
               })
             }}
+            style={{ width: '400px' }}
           />
         </DialogContent>
         <DialogActions classes={useDialogActionsStyles()}>
