@@ -70,7 +70,7 @@ async function handleMessage(request, sender) {
     }
     case 'get tabs info': {
       const options = { currentWindow: true }
-      if (request.payload.unpinned) {
+      if (request.payload?.unpinned) {
         options.pinned = false
       }
       response = await chrome.tabs.query(options)

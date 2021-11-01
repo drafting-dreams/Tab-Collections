@@ -29,6 +29,7 @@ import {
   AddBoxOutlined as AddBoxOutlinedIcon,
   FormatIndentIncreaseOutlined as FormatIndentIncreaseOutlinedIcon,
   FormatIndentDecreaseOutlined as FormatIndentDecreaseOutlinedIcon,
+  PostAddOutlined as PostAddOutlinedIcon,
   OpenInBrowserOutlined as OpenInBrowserOutlinedIcon,
   MoreHorizOutlined as MoreHorizOutlinedIcon,
   LibraryAddOutlined as LibraryAddOutlinedIcon,
@@ -268,6 +269,18 @@ function Collection(props) {
       })
     })
   }
+  const addTabsInTheSameGroup = () => {
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, currentTab => {
+      if (currentTab.groupId < 0) {
+        setList([...list, mapTabToCollection(currentTab)])
+      } else {
+        chrome.runtime.sendMessage({ type: 'get tabs info' }, response => {
+          setList([...list, ...response.filter(tab => tab.groupId === currentTab.groupId).map(mapTabToCollection)])
+        })
+      }
+      setMoreClickPosition(null)
+    })
+  }
 
   const checkOn = idx => {
     const filtered = selectedList.filter(i => i !== idx)
@@ -362,6 +375,12 @@ function Collection(props) {
               <FormatIndentDecreaseOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Add standalones on the left
+          </MenuItem>
+          <MenuItem className="list-text" onClick={addTabsInTheSameGroup}>
+            <ListItemIcon className="list-icon-root">
+              <PostAddOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Add tabs in the same group
           </MenuItem>
           <MenuItem className="list-text" onClick={addAllTabs(true)}>
             <ListItemIcon className="list-icon-root">
