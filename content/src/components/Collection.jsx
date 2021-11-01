@@ -27,6 +27,8 @@ import {
   DeleteOutlineOutlined as DeleteOutlineOutlinedIcon,
   AddCircleOutlineOutlined as AddCircleOutlineOutlinedIcon,
   AddBoxOutlined as AddBoxOutlinedIcon,
+  FormatIndentIncreaseOutlined as FormatIndentIncreaseOutlinedIcon,
+  FormatIndentDecreaseOutlined as FormatIndentDecreaseOutlinedIcon,
   OpenInBrowserOutlined as OpenInBrowserOutlinedIcon,
   MoreHorizOutlined as MoreHorizOutlinedIcon,
   LibraryAddOutlined as LibraryAddOutlinedIcon,
@@ -239,6 +241,33 @@ function Collection(props) {
       setMoreClickPosition(null)
     })
   }
+  const addWithDirection = right => {
+    chrome.runtime.sendMessage({ type: 'get tabs info', payload: { unpinned: true } }, response => {
+      chrome.runtime.sendMessage({ type: 'get current tab info' }, currentTab => {
+        const tabsOnTheDirection = []
+        let currentTabIndex
+        for (let i = right ? 0 : response.length - 1; i >= 0 && i < response.length; i += right ? 1 : -1) {
+          if (response[i].id === currentTab.id) {
+            currentTabIndex = i
+            if (currentTab.groupId < 0) tabsOnTheDirection.push(response[i])
+            continue
+          } else if (currentTabIndex === undefined || (currentTab.groupId > -1 && response[i].groupId === currentTab.groupId)) {
+            continue
+          }
+
+          if (response[i].groupId > -1) {
+            break
+          }
+          tabsOnTheDirection.push(response[i])
+        }
+        if (!right) {
+          tabsOnTheDirection.reverse()
+        }
+        setList([...list, ...tabsOnTheDirection.map(mapTabToCollection)])
+        setMoreClickPosition(null)
+      })
+    })
+  }
 
   const checkOn = idx => {
     const filtered = selectedList.filter(i => i !== idx)
@@ -311,6 +340,28 @@ function Collection(props) {
               <AddCircleOutlineOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Add all standalone tabs
+          </MenuItem>
+          <MenuItem
+            className="list-text"
+            onClick={() => {
+              addWithDirection(true)
+            }}
+          >
+            <ListItemIcon className="list-icon-root">
+              <FormatIndentIncreaseOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Add standalones on the right
+          </MenuItem>
+          <MenuItem
+            className="list-text"
+            onClick={() => {
+              addWithDirection()
+            }}
+          >
+            <ListItemIcon className="list-icon-root">
+              <FormatIndentDecreaseOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Add standalones on the left
           </MenuItem>
           <MenuItem className="list-text" onClick={addAllTabs(true)}>
             <ListItemIcon className="list-icon-root">
