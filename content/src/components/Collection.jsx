@@ -25,6 +25,7 @@ import {
   ArrowBackIosOutlined as ArrowBackIosOutlinedIcon,
   InsertDriveFileOutlined as InsertDriveFileOutlinedIcon,
   DeleteOutlineOutlined as DeleteOutlineOutlinedIcon,
+  AddCircleOutlineOutlined as AddCircleOutlineOutlinedIcon,
   AddBoxOutlined as AddBoxOutlinedIcon,
   OpenInBrowserOutlined as OpenInBrowserOutlinedIcon,
   MoreHorizOutlined as MoreHorizOutlinedIcon,
@@ -38,7 +39,7 @@ import AppContext from '../context'
 
 import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
 
-import { copy } from '../utils'
+import { copy, mapTabToCollection } from '../utils'
 
 import { useDialogStyles, useDialogActionsStyles } from '../styles/madeStyles'
 
@@ -228,7 +229,13 @@ function Collection(props) {
   }
   const addAllTabs = unpinned => () => {
     chrome.runtime.sendMessage({ type: 'get tabs info', payload: { unpinned } }, function (response) {
-      setList([...list, ...response.map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] }))])
+      setList([...list, ...response.map(mapTabToCollection)])
+      setMoreClickPosition(null)
+    })
+  }
+  const addStandaloneTabs = () => {
+    chrome.runtime.sendMessage({ type: 'get tabs info', payload: { unpinned: true } }, response => {
+      setList([...list, ...response.filter(tab => tab.groupId < 0).map(mapTabToCollection)])
       setMoreClickPosition(null)
     })
   }
@@ -299,6 +306,12 @@ function Collection(props) {
             setMoreClickPosition(null)
           }}
         >
+          <MenuItem className="list-text" onClick={addStandaloneTabs}>
+            <ListItemIcon className="list-icon-root">
+              <AddCircleOutlineOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Add all standalone tabs
+          </MenuItem>
           <MenuItem className="list-text" onClick={addAllTabs(true)}>
             <ListItemIcon className="list-icon-root">
               <LibraryAddOutlinedIcon className="list-icon" />

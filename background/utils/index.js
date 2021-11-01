@@ -1,5 +1,6 @@
 import { localStorage, getPinRegistry } from './webStore'
 
+export * from '../../utils'
 export * from './utils'
 
 export function initOnInstalled() {

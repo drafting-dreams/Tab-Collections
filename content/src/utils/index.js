@@ -1,3 +1,5 @@
+export * from '../../../utils'
+
 export function copy(content) {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(content)

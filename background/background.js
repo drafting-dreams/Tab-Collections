@@ -1,7 +1,7 @@
 import { getDB } from './db/connect'
 import * as query from './db/transactions'
 
-import { initOnInstalled, reloadExtensionContent, registerTabUpdateEvent, filterChromeProtocol } from './utils'
+import { initOnInstalled, reloadExtensionContent, registerTabUpdateEvent, filterChromeProtocol, mapTabToCollection } from './utils'
 import { getLocalStorage, setLocalStorage, getPinRegistry, setPinRegistry } from './utils/webStore'
 
 initOnInstalled()
@@ -17,8 +17,6 @@ async function handleMessage(request, sender) {
   const TITLE_PLACEHOLDER = 'New Collections'
   let response
   const db = await getDB()
-
-  const mapTabToCollection = tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })
 
   switch (request.type) {
     case 'ask if pinned': {
