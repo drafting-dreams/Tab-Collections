@@ -125,6 +125,7 @@ html.tab-collections-pinned {
             right: 18px;
           }
           .selected-tip {
+            flex-direction: row;
             padding: 2px 4px;
             position: absolute;
             right: 6px;
