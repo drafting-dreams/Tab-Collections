@@ -1,8 +1,11 @@
 import { makeStyles } from '@material-ui/styles'
 
 export const useDialogStyles = makeStyles({
+  root: {
+    zIndex: '2147483646 !important',
+  },
   paper: {
-    width: '400px',
+    maxWidth: '500px',
   },
 })
 export const useDialogActionsStyles = makeStyles({

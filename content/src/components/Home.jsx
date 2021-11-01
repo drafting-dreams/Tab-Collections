@@ -31,10 +31,11 @@ import {
   TransformOutlined as TransformOutlinedIcon,
 } from '@material-ui/icons'
 
+import AppContext from '../context'
+
 import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
 
 import { useDialogStyles, useDialogActionsStyles } from '../styles/madeStyles'
-import AppContext from '../context'
 
 const NEW_COLLECTIONS = 'New Collections'
 
@@ -112,7 +113,6 @@ function Home(props) {
   const [displayDeleteDialog, setDisplayDeleteDialog] = useState(false)
   const handleDeleteDialogClose = () => {
     setDisplayDeleteDialog(false)
-    menuSelected.current = undefined
   }
 
   // MoreOptionsMenu
@@ -386,7 +386,9 @@ function Home(props) {
         <DialogContent>{`Are you sure you want to delete the selected collection(s)?`}</DialogContent>
         <DialogActions classes={useDialogActionsStyles()}>
           <Button onClick={handleDeleteDialogClose}>Cancel</Button>
-          <Button onClick={isBatchDelete.current ? deleteSelected : deleteCollection}>Delete</Button>
+          <Button onClick={isBatchDelete.current ? deleteSelected : deleteCollection} className="alert-color">
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
     </div>

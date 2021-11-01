@@ -1,7 +1,22 @@
 import React, { useEffect, useState, useContext, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
-import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip, Checkbox } from '@material-ui/core'
+import {
+  Paper,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  InputBase,
+  Link,
+  Divider,
+  Tooltip,
+  Checkbox,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from '@material-ui/core'
 import {
   CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
   CheckBox as CheckBoxIcon,
@@ -19,10 +34,13 @@ import {
   SwapCalls as SwapCallsIcon,
 } from '@material-ui/icons'
 
+import AppContext from '../context'
+
 import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
 
 import { copy } from '../utils'
-import AppContext from '../context'
+
+import { useDialogStyles, useDialogActionsStyles } from '../styles/madeStyles'
 
 function goBack(setLocation) {
   setLocation('/')
@@ -121,16 +139,34 @@ function Collection(props) {
     setRightClickPosition(null)
   }
 
+  const deleteType = useRef('one') // 'one', 'selected', 'all'
+  const [displayDeleteDialog, setDisplayDeleteDialog] = useState(false)
+  const handleDeleteDialogClose = () => {
+    setDisplayDeleteDialog(false)
+  }
+  const openDeleteOne = () => {
+    deleteType.current = 'one'
+    setDisplayDeleteDialog(true)
+    setRightClickPosition(null)
+  }
+  const openDeleteSelected = () => {
+    deleteType.current = 'selected'
+    setDisplayDeleteDialog(true)
+  }
+  const openDeleteAll = () => {
+    deleteType.current = 'all'
+    setDisplayDeleteDialog(true)
+    setMoreClickPosition(null)
+  }
   const deleteOne = () => {
     const deletedList = [...list]
     deletedList.splice(menuSelected.current, 1)
     setList(deletedList)
-
-    setRightClickPosition(null)
+    handleDeleteDialogClose()
   }
   const deleteAll = () => {
     setList([])
-    setMoreClickPosition(null)
+    handleDeleteDialogClose()
   }
   const deleteSelected = () => {
     const temp = [...list]
@@ -139,6 +175,19 @@ function Collection(props) {
     })
     setList(temp.filter(item => item !== undefined))
     setSelectedList([])
+    handleDeleteDialogClose()
+  }
+  const confirmDelete = () => {
+    switch (deleteType.current) {
+      case 'one':
+        deleteOne()
+        break
+      case 'selected':
+        deleteSelected()
+        break
+      case 'all':
+        deleteAll()
+    }
   }
 
   const openOneInCurrentTab = () => {
@@ -286,7 +335,7 @@ function Collection(props) {
             Open all tabs
           </MenuItem>
           <Divider />
-          <MenuItem className="list-text" onClick={deleteAll}>
+          <MenuItem className="list-text" onClick={openDeleteAll}>
             <ListItemIcon className="list-icon-root">
               <DeleteOutlineOutlinedIcon className="list-icon" />
             </ListItemIcon>
@@ -305,7 +354,7 @@ function Collection(props) {
             <OpenInBrowserOutlinedIcon className="tip-icon" onClick={openSelectedInNewTab} />
           </Tooltip>
           <Tooltip title="Delete selected" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
-            <DeleteOutlineOutlinedIcon className="tip-icon" onClick={deleteSelected} />
+            <DeleteOutlineOutlinedIcon className="tip-icon" onClick={openDeleteSelected} />
           </Tooltip>
         </Paper>
       </div>
@@ -374,7 +423,7 @@ function Collection(props) {
             </ListItemIcon>
             Copy URL
           </MenuItem>
-          <MenuItem className="list-text" onClick={deleteOne}>
+          <MenuItem className="list-text" onClick={openDeleteOne}>
             <ListItemIcon className="list-icon-root">
               <DeleteOutlineOutlinedIcon className="list-icon" />
             </ListItemIcon>
@@ -389,6 +438,16 @@ function Collection(props) {
           </MenuItem>
         </Menu>
       </div>
+      <Dialog classes={useDialogStyles()} open={displayDeleteDialog} onClose={handleDeleteDialogClose}>
+        <DialogTitle onClose={handleDeleteDialogClose}>Delete Tab</DialogTitle>
+        <DialogContent>{`Are you sure you want to delete the selected tab(s)?`}</DialogContent>
+        <DialogActions classes={useDialogActionsStyles()}>
+          <Button onClick={handleDeleteDialogClose}>Cancel</Button>
+          <Button onClick={confirmDelete} className="alert-color">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }
