@@ -107,6 +107,14 @@ function Home(props) {
     dialogDispatch({ type: 'close' })
   }
 
+  // Deletion Confirm Dialog
+  const isBatchDelete = useRef(false)
+  const [displayDeleteDialog, setDisplayDeleteDialog] = useState(false)
+  const handleDeleteDialogClose = () => {
+    setDisplayDeleteDialog(false)
+    menuSelected.current = undefined
+  }
+
   // MoreOptionsMenu
   const openMoreOptionsMenu = event => {
     const position = event.currentTarget.getBoundingClientRect()
@@ -162,12 +170,21 @@ function Home(props) {
       }
     })
   }
+  const handleClickDeleteItem = () => {
+    isBatchDelete.current = false
+    setDisplayDeleteDialog(true)
+    setRightClickPosition(null)
+  }
   const deleteCollection = () => {
     chrome.runtime.sendMessage({ type: 'delete collection', payload: { keys: [collections[menuSelected.current].id] } })
     const temp = [...collections]
     temp.splice(menuSelected.current, 1)
     setCollections(temp)
-    setRightClickPosition(null)
+    handleDeleteDialogClose()
+  }
+  const handleClickBatchDeleteIcon = () => {
+    isBatchDelete.current = true
+    setDisplayDeleteDialog(true)
   }
   const deleteSelected = () => {
     chrome.runtime.sendMessage({ type: 'delete collection', payload: { keys: selectedList.map(idx => collections[idx].id) } })
@@ -177,15 +194,11 @@ function Home(props) {
     })
     setCollections(temp.filter(c => c !== undefined))
     setSelectedList([])
+    handleDeleteDialogClose()
   }
   const handleMenuClose = () => {
     setRightClickPosition(null)
   }
-  useEffect(() => {
-    if (rightClickPosition === null) {
-      menuSelected.current = undefined
-    }
-  }, [rightClickPosition])
 
   const checkOn = idx => {
     const filtered = selectedList.filter(i => i !== idx)
@@ -254,7 +267,7 @@ function Home(props) {
           />
           <span style={{ flexGrow: 1, marginLeft: '2px' }}>{selectedList.length} collections selected</span>
           <Tooltip title="Delete selected" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
-            <DeleteOutlineOutlinedIcon className="tip-icon" onClick={deleteSelected} />
+            <DeleteOutlineOutlinedIcon className="tip-icon" onClick={handleClickBatchDeleteIcon} />
           </Tooltip>
         </Paper>
       </div>
@@ -337,7 +350,7 @@ function Home(props) {
             </MenuItem>
           )}
           {showOpenAllTabsMenuItem && <Divider />}
-          <MenuItem className="list-text" onClick={deleteCollection}>
+          <MenuItem className="list-text" onClick={handleClickDeleteItem}>
             <ListItemIcon className="list-icon-root">
               <DeleteOutlineOutlinedIcon className="list-icon" />
             </ListItemIcon>
@@ -366,6 +379,14 @@ function Home(props) {
           <Button variant="contained" color="primary" onClick={handleSubmit}>
             Confirm
           </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog classes={useDialogStyles()} open={displayDeleteDialog} onClose={handleDeleteDialogClose}>
+        <DialogTitle onClose={handleDeleteDialogClose}>Delete Collection</DialogTitle>
+        <DialogContent>{`Are you sure you want to delete the selected collection(s)?`}</DialogContent>
+        <DialogActions classes={useDialogActionsStyles()}>
+          <Button onClick={handleDeleteDialogClose}>Cancel</Button>
+          <Button onClick={isBatchDelete.current ? deleteSelected : deleteCollection}>Delete</Button>
         </DialogActions>
       </Dialog>
     </div>
