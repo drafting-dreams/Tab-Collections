@@ -14,7 +14,8 @@ export function copy(content) {
     try {
       document.execCommand('copy')
     } catch (err) {
-      console.error('无法复制到剪切板')
+      console.error("Couldn't't copy to clipboard")
+      throw err
     }
     document.body.removeChild(textArea)
   }

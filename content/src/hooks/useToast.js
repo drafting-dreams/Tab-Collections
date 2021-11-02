@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 export default function useToast() {
   const [toast, setToast] = useState('')
+  const [severity, setSeverity] = useState('warning')
   const [displayToast, setDisplayToast] = useState(false)
   const handleToastClose = () => {
     setDisplayToast(false)
@@ -15,7 +16,11 @@ export default function useToast() {
 
   return {
     toast,
-    setToast,
+    severity,
+    setToast: (message, severity = 'warning') => {
+      setToast(message)
+      setSeverity(severity)
+    },
     displayToast,
     handleToastClose,
   }

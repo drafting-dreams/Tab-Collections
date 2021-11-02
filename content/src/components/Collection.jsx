@@ -291,8 +291,13 @@ function Collection(props) {
   }
 
   const copyUrl = () => {
-    copy(list[menuSelected.current].url)
-    setRightClickPosition(null)
+    try {
+      setRightClickPosition(null)
+      copy(list[menuSelected.current].url)
+      setToast('Successfully copied to clipboard', 'success')
+    } catch (err) {
+      setToast("Couldn't copy to clipboard")
+    }
   }
 
   const showGroupTabFeatures = ENABLE_GROUP_TAB_FEATURE && !!list?.length

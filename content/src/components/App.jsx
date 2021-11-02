@@ -22,7 +22,7 @@ function App() {
     })
   }, [])
 
-  const { toast, setToast, displayToast, handleToastClose } = useToast()
+  const { toast, setToast, displayToast, handleToastClose, severity } = useToast()
 
   return (
     <div>
@@ -37,7 +37,7 @@ function App() {
           onClose={handleToastClose}
           anchorOrigin={{ horizontal: 'center', vertical: 'top' }}
         >
-          <Alert classes={useAlertStyles()} severity="warning" variant="filled">
+          <Alert classes={useAlertStyles()} severity={severity} variant="filled">
             {toast}
           </Alert>
         </Snackbar>
