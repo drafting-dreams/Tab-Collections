@@ -29,11 +29,12 @@ import {
   PostAddOutlined as PostAddOutlinedIcon,
   SwapCalls as SwapCallsIcon,
   TransformOutlined as TransformOutlinedIcon,
+  BackupOutlined as BackupOutlinedIcon,
 } from '@material-ui/icons'
 
 import AppContext from '../context'
 
-import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
+import { ENABLE_GROUP_TAB_FEATURE, ENABLE_ARCHIVE } from '../utils/featureToggles'
 
 import { useDialogStyles, useDialogActionsStyles } from '../styles/madeStyles'
 
@@ -208,6 +209,81 @@ function Home(props) {
     setSelectedList(filtered)
   }
 
+  const backup = () => {
+    setMoreClickPosition(null)
+    const fileName = 'TabCollections.backup'
+    chrome.runtime.sendMessage({ type: 'get token' }, token => {
+      if (!token) {
+        setToast('Authenticate failed')
+        return
+      }
+      chrome.runtime.sendMessage({ type: 'get all' }, response => {
+        const createBackupFile = () => {
+          const metadata = new Blob([JSON.stringify({ name: 'TabCollections.backup' })], { type: 'application/json' })
+          const file = new Blob([JSON.stringify(response)], { type: 'application/json' })
+          const form = new FormData()
+          form.append('metadata', metadata)
+          form.append('myfile', file)
+          const xhr = new XMLHttpRequest()
+          xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart')
+          xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+          xhr.responseType = 'json'
+          xhr.onload = () => {
+            if (xhr.response.id) setToast("Succeessfully backed up in 'TabCollections.backup'", 'success')
+            else {
+              setToast(xhr.response === 'string' ? xhr.response : "Couldn't create backup file", 'error')
+            }
+          }
+          xhr.onerror = () => {
+            setToast('Network error', 'error')
+          }
+          xhr.send(form)
+        }
+        const listFiles = new XMLHttpRequest()
+        listFiles.open('GET', `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${fileName}'`)}`)
+        listFiles.setRequestHeader('Authorization', 'Bearer ' + token)
+        listFiles.onload = () => {
+          const fileListRes = JSON.parse(listFiles.response)
+          if (fileListRes?.files?.length) {
+            Promise.all(
+              fileListRes.files.map(
+                file =>
+                  new Promise((resolve, reject) => {
+                    const deleteFile = new XMLHttpRequest()
+                    deleteFile.open('DELETE', `https://www.googleapis.com/drive/v2/files/${file.id}`)
+                    deleteFile.onerror = () => {
+                      reject('Failed to delete old backup files')
+                    }
+                    deleteFile.onload = () => {
+                      if (deleteFile.response) {
+                        reject('Failed to delete old backup files')
+                      } else {
+                        resolve()
+                      }
+                    }
+                    deleteFile.setRequestHeader('Authorization', 'Bearer ' + token)
+                    deleteFile.send()
+                  })
+              )
+            )
+              .then(() => {
+                createBackupFile()
+              })
+              .catch(() => {
+                setToast("Couldn't create backup file")
+              })
+          } else {
+            createBackupFile()
+          }
+        }
+        listFiles.onerror = () => {
+          setToast('Network error', 'error')
+        }
+        listFiles.send()
+      })
+    })
+  }
+
   const showOpenAllTabsMenuItem = menuSelected.current !== undefined && collections[menuSelected.current]?.list.length > 0
   const showOpenInNewTabMenuItem = showOpenAllTabsMenuItem && ENABLE_GROUP_TAB_FEATURE
 
@@ -234,7 +310,7 @@ function Home(props) {
             <MoreHorizOutlinedIcon className="icon icon-more" />
           </Tooltip>
         )}
-        {ENABLE_GROUP_TAB_FEATURE && (
+        {(ENABLE_GROUP_TAB_FEATURE || ENABLE_ARCHIVE) && (
           <Menu
             container={document.querySelector('.tab-collections-react-root')}
             autoFocus={false}
@@ -244,18 +320,31 @@ function Home(props) {
             open={moreClickPosition !== null}
             onClose={closeMoreOptionsMenu}
           >
-            <MenuItem className="list-text" onClick={createCollectionWithSurroundings}>
-              <ListItemIcon className="list-icon-root">
-                <TransformOutlinedIcon className="list-icon" />
-              </ListItemIcon>
-              Group surroundings into a collection
-            </MenuItem>
-            <MenuItem className="list-text" onClick={createCollectionWithGroup}>
-              <ListItemIcon className="list-icon-root">
-                <PostAddOutlinedIcon className="list-icon" />
-              </ListItemIcon>
-              Create collection with current tab group
-            </MenuItem>
+            {ENABLE_GROUP_TAB_FEATURE && (
+              <MenuItem className="list-text" onClick={createCollectionWithSurroundings}>
+                <ListItemIcon className="list-icon-root">
+                  <TransformOutlinedIcon className="list-icon" />
+                </ListItemIcon>
+                Group surroundings into a collection
+              </MenuItem>
+            )}
+            {ENABLE_GROUP_TAB_FEATURE && (
+              <MenuItem className="list-text" onClick={createCollectionWithGroup}>
+                <ListItemIcon className="list-icon-root">
+                  <PostAddOutlinedIcon className="list-icon" />
+                </ListItemIcon>
+                Create collection with current tab group
+              </MenuItem>
+            )}
+            {ENABLE_ARCHIVE && ENABLE_GROUP_TAB_FEATURE && <Divider />}
+            {ENABLE_ARCHIVE && (
+              <MenuItem className="list-text" onClick={backup}>
+                <ListItemIcon className="list-icon-root">
+                  <BackupOutlinedIcon className="list-icon" />
+                </ListItemIcon>
+                Backup
+              </MenuItem>
+            )}
           </Menu>
         )}
         <Paper className="selected-tip" style={{ display: selectedList.length ? 'flex' : 'none' }}>

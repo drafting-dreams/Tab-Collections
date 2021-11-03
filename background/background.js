@@ -186,6 +186,15 @@ async function handleMessage(request, sender) {
           })
         })
       }
+      break
+    }
+    case 'get token': {
+      response = await new Promise(resolve => {
+        chrome.identity.getAuthToken({ interactive: true }, token => {
+          resolve(token)
+        })
+      })
+      break
     }
   }
 
