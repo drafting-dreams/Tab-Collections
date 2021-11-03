@@ -30,6 +30,7 @@ import {
   SwapCalls as SwapCallsIcon,
   TransformOutlined as TransformOutlinedIcon,
   BackupOutlined as BackupOutlinedIcon,
+  CloudDownloadOutlined as CloudDownloadOutlinedIcon,
 } from '@material-ui/icons'
 
 import AppContext from '../context'
@@ -209,9 +210,9 @@ function Home(props) {
     setSelectedList(filtered)
   }
 
+  const fileName = 'TabCollections.backup'
   const backup = () => {
     setMoreClickPosition(null)
-    const fileName = 'TabCollections.backup'
     chrome.runtime.sendMessage({ type: 'get token' }, token => {
       if (!token) {
         setToast('Authenticate failed')
@@ -219,6 +220,9 @@ function Home(props) {
       }
       chrome.runtime.sendMessage({ type: 'get all' }, response => {
         const createBackupFile = () => {
+          response.forEach(collection => {
+            delete collection.id
+          })
           const metadata = new Blob([JSON.stringify({ name: 'TabCollections.backup' })], { type: 'application/json' })
           const file = new Blob([JSON.stringify(response)], { type: 'application/json' })
           const form = new FormData()
@@ -243,7 +247,12 @@ function Home(props) {
         listFiles.open('GET', `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${fileName}'`)}`)
         listFiles.setRequestHeader('Authorization', 'Bearer ' + token)
         listFiles.onload = () => {
-          const fileListRes = JSON.parse(listFiles.response)
+          let fileListRes
+          try {
+            fileListRes = JSON.parse(listFiles.response)
+          } catch {
+            console.warn('list files reponse format is not a json')
+          }
           if (fileListRes?.files?.length) {
             Promise.all(
               fileListRes.files.map(
@@ -281,6 +290,57 @@ function Home(props) {
         }
         listFiles.send()
       })
+    })
+  }
+  const restore = () => {
+    setMoreClickPosition(null)
+    chrome.runtime.sendMessage({ type: 'get token' }, token => {
+      if (!token) {
+        setToast('Authenticate failed')
+        return
+      }
+      const xhr = new XMLHttpRequest()
+      xhr.open('GET', `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${fileName}'`)}`)
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+      xhr.onload = () => {
+        let fileListRes
+        try {
+          fileListRes = JSON.parse(xhr.response)
+        } catch {
+          console.warn('list files reponse format is not a json')
+        }
+        if (fileListRes.files) {
+          if (fileListRes.files.length) {
+            const fileId = fileListRes.files[0].id
+            const readFile = new XMLHttpRequest()
+            readFile.open('GET', `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`)
+            readFile.setRequestHeader('Authorization', 'Bearer ' + token)
+            readFile.onload = async () => {
+              let collections
+              try {
+                collections = JSON.parse(readFile.response)
+                chrome.runtime.sendMessage({ type: 'add collections', payload: collections }, () => {
+                  setToast('Successfully imported', 'success')
+                })
+              } catch {
+                setToast('Backup file damaged', 'error')
+              }
+            }
+            readFile.onerror = () => {
+              setToast('Network error', 'error')
+            }
+            readFile.send()
+          } else {
+            setToast('Backup file not found')
+          }
+        } else {
+          setToast("Couldn't read files")
+        }
+      }
+      xhr.onerror = () => {
+        setToast('Network error', 'error')
+      }
+      xhr.send()
     })
   }
 
@@ -343,6 +403,14 @@ function Home(props) {
                   <BackupOutlinedIcon className="list-icon" />
                 </ListItemIcon>
                 Backup
+              </MenuItem>
+            )}
+            {ENABLE_ARCHIVE && (
+              <MenuItem className="list-text" onClick={restore}>
+                <ListItemIcon className="list-icon-root">
+                  <CloudDownloadOutlinedIcon className="list-icon" />
+                </ListItemIcon>
+                Import from backup
               </MenuItem>
             )}
           </Menu>

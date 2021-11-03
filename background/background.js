@@ -82,6 +82,16 @@ async function handleMessage(request, sender) {
       reloadExtensionContent({ selfId: sender.tab.id })
       break
     }
+    case 'add collections': {
+      let res = []
+      request.payload.reverse()
+      for (let collection of request.payload) {
+        res.push(await query.add(db, collection))
+      }
+      response = res
+      reloadExtensionContent({ selfId: sender.tab.id, excludeSelf: false })
+      break
+    }
     case 'get collection': {
       response = query.get(db, request.payload.key)
       break
