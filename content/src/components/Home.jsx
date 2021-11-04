@@ -31,6 +31,7 @@ import {
   TransformOutlined as TransformOutlinedIcon,
   BackupOutlined as BackupOutlinedIcon,
   CloudDownloadOutlined as CloudDownloadOutlinedIcon,
+  ArchiveOutlined as ArchiveOutlinedIcon,
 } from '@material-ui/icons'
 
 import AppContext from '../context'
@@ -343,6 +344,100 @@ function Home(props) {
       xhr.send()
     })
   }
+  const archive = (batch = false) => {
+    let archivingList
+    if (batch) {
+      archivingList = selectedList.map(idx => collections[idx])
+    } else {
+      archivingList = [collections[menuSelected.current]]
+    }
+    const folderMimeType = 'application/vnd.google-apps.folder'
+    const folderName = 'TabCollections-Archives'
+    setRightClickPosition(null)
+    setSelectedList([])
+    chrome.runtime.sendMessage({ type: 'get token' }, token => {
+      if (!token) {
+        setToast('Authenticate failed')
+        return
+      }
+      const createArchiveFile = folder => {
+        Promise.all(
+          archivingList.map(
+            collection =>
+              new Promise((resolve, reject) => {
+                const form = new FormData()
+                const metadata = new Blob([JSON.stringify({ name: collection.title, parents: [folder] })], { type: 'application/json' })
+                const file = new Blob([collection.list.reduce((prev, cur, index) => `${prev}${index + 1}. ${cur.title}\r\n    ${cur.url}\r\n`, '')], {
+                  type: 'text/plain',
+                })
+                form.append('metadat', metadata)
+                form.append('myfile', file)
+                const xhr = new XMLHttpRequest()
+                xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart')
+                xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+                xhr.onload = () => {
+                  try {
+                    if (JSON.parse(xhr.response).id) {
+                      resolve()
+                    } else {
+                      reject()
+                    }
+                  } catch {
+                    reject()
+                  }
+                }
+                xhr.onerror = () => {
+                  reject()
+                }
+                xhr.send(form)
+              })
+          )
+        )
+          .then(() => {
+            setToast('Successfully archived', 'success')
+          })
+          .catch(() => {
+            setToast('Failed to archive')
+          })
+      }
+      const searchFolder = new XMLHttpRequest()
+      searchFolder.open('GET', `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${folderName}'`)}`)
+      searchFolder.setRequestHeader('Authorization', 'Bearer ' + token)
+      searchFolder.onload = () => {
+        let searchFolderRes, folderId
+        try {
+          searchFolderRes = JSON.parse(searchFolder.response)
+        } catch {
+          setToast('Invalid response')
+        }
+        if (!(searchFolderRes?.files?.length && searchFolderRes.files[0].mimeType === 'application/vnd.google-apps.folder')) {
+          const createFolder = new XMLHttpRequest()
+          createFolder.open('POST', 'https://www.googleapis.com/drive/v3/files')
+          createFolder.setRequestHeader('Content-Type', 'application/json')
+          createFolder.setRequestHeader('Authorization', 'Bearer ' + token)
+          createFolder.onload = () => {
+            try {
+              folderId = JSON.parse(createFolder.response).id
+              createArchiveFile(folderId)
+            } catch {
+              setToast('Invalid Response')
+            }
+          }
+          createFolder.onerror = () => {
+            setToast('Network error', 'error')
+          }
+          createFolder.send(JSON.stringify({ name: folderName, mimeType: folderMimeType }))
+        } else {
+          folderId = searchFolderRes.files[0].id
+          createArchiveFile(folderId)
+        }
+      }
+      searchFolder.onerror = () => {
+        setToast('Network error', 'error')
+      }
+      searchFolder.send()
+    })
+  }
 
   const showOpenAllTabsMenuItem = menuSelected.current !== undefined && collections[menuSelected.current]?.list.length > 0
   const showOpenInNewTabMenuItem = showOpenAllTabsMenuItem && ENABLE_GROUP_TAB_FEATURE
@@ -423,6 +518,14 @@ function Home(props) {
             }}
           />
           <span style={{ flexGrow: 1, marginLeft: '2px' }}>{selectedList.length} collections selected</span>
+          <Tooltip title="Archive selected" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
+            <ArchiveOutlinedIcon
+              className="tip-icon"
+              onClick={() => {
+                archive(true)
+              }}
+            />
+          </Tooltip>
           <Tooltip title="Delete selected" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
             <DeleteOutlineOutlinedIcon className="tip-icon" onClick={handleClickBatchDeleteIcon} />
           </Tooltip>
@@ -507,6 +610,20 @@ function Home(props) {
             </MenuItem>
           )}
           {showOpenAllTabsMenuItem && <Divider />}
+          {ENABLE_ARCHIVE && (
+            <MenuItem
+              className="list-text"
+              onClick={() => {
+                archive()
+              }}
+            >
+              <ListItemIcon className="list-icon-root">
+                <ArchiveOutlinedIcon className="list-icon" />
+              </ListItemIcon>
+              Archive
+            </MenuItem>
+          )}
+          {ENABLE_ARCHIVE && <Divider />}
           <MenuItem className="list-text" onClick={handleClickDeleteItem}>
             <ListItemIcon className="list-icon-root">
               <DeleteOutlineOutlinedIcon className="list-icon" />
