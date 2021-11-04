@@ -125,6 +125,7 @@ html.tab-collections-pinned {
             right: 18px;
           }
           .selected-tip {
+            flex-direction: row;
             padding: 2px 4px;
             position: absolute;
             right: 6px;
@@ -189,6 +190,7 @@ html.tab-collections-pinned {
             .title {
               font-size: 16px;
               font-weight: 500;
+              margin-right: 16px !important;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
@@ -213,6 +215,9 @@ html.tab-collections-pinned {
         }
       }
     }
+  }
+  .alert-color {
+    color: rgb(224, 28, 28);
   }
 }
 

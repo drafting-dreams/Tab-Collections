@@ -1,57 +1,11 @@
 import { getDB } from './db/connect'
 import * as query from './db/transactions'
 
-const localStorage = chrome.storage.local
+import { initOnInstalled, reloadExtensionContent, registerTabUpdateEvent, filterChromeProtocol, mapTabToCollection } from './utils'
+import { getLocalStorage, setLocalStorage, getPinRegistry, setPinRegistry } from './utils/webStore'
 
-// Initialization on first installation
-chrome.runtime.onInstalled.addListener(() => {
-  // Whether the extension shows on the page, default is false
-  localStorage.set({ pinned: false })
-  // When a new tab registered, push it in
-  localStorage.set({ pin_registry: '' })
-  localStorage.set({ location: '/' })
-
-  chrome.tabs.query({}, tabs => {
-    tabs.forEach(tab => {
-      chrome.scripting
-        .executeScript({
-          target: { tabId: tab.id },
-          files: ['content.js'],
-        })
-        .catch(err => {
-          console.log(err) // Usually, caused by an unloaded page, or a chrome internal url to which the extension doesn't have access
-        })
-    })
-  })
-})
-
-function getLocalStorage(key) {
-  return new Promise(resolve => {
-    localStorage.get([key], re => {
-      resolve(re[key])
-    })
-  })
-}
-function setLocalStorage(key, value) {
-  localStorage.set({ [key]: value })
-}
-function getPinRegistry() {
-  return getLocalStorage('pin_registry').then(pin_registry => pin_registry.split(',').map(id => Number(id)))
-}
-function setPinRegistry(ids) {
-  setLocalStorage('pin_registry', ids.join(','))
-}
-
-function reloadExtensionContent({ selfId, excludeSelf = true }) {
-  getPinRegistry().then(pin_registry => {
-    if (excludeSelf) pin_registry = pin_registry.filter(id => id !== selfId)
-    pin_registry.forEach(id => {
-      chrome.tabs.sendMessage(id, {
-        type: 'reload',
-      })
-    })
-  })
-}
+initOnInstalled()
+registerTabUpdateEvent()
 
 chrome.action.onClicked.addListener(function (tab) {
   chrome.tabs.sendMessage(tab.id, {
@@ -60,6 +14,7 @@ chrome.action.onClicked.addListener(function (tab) {
 })
 
 async function handleMessage(request, sender) {
+  const TITLE_PLACEHOLDER = 'New Collections'
   let response
   const db = await getDB()
 
@@ -115,7 +70,7 @@ async function handleMessage(request, sender) {
     }
     case 'get tabs info': {
       const options = { currentWindow: true }
-      if (request.payload.unpinned) {
+      if (request.payload?.unpinned) {
         options.pinned = false
       }
       response = await chrome.tabs.query(options)
@@ -125,6 +80,16 @@ async function handleMessage(request, sender) {
     case 'add collection': {
       response = await query.add(db, request.payload)
       reloadExtensionContent({ selfId: sender.tab.id })
+      break
+    }
+    case 'add collections': {
+      let res = []
+      request.payload.reverse()
+      for (let collection of request.payload) {
+        res.push(await query.add(db, collection))
+      }
+      response = res
+      reloadExtensionContent({ selfId: sender.tab.id, excludeSelf: false })
       break
     }
     case 'get collection': {
@@ -148,33 +113,57 @@ async function handleMessage(request, sender) {
       break
     }
 
+    case 'create collection with surroundings': {
+      const allTabs = await chrome.tabs.query({ currentWindow: true })
+      const senderTabIndex = allTabs.findIndex(tab => tab.id === sender.tab.id)
+
+      let i, j
+      i = j = senderTabIndex
+      while (i >= 0 && !allTabs[i].pinned && allTabs[i].groupId < 0) {
+        i--
+      }
+      while (j < allTabs.length && !allTabs[j].pinned && allTabs[j].groupId < 0) {
+        j++
+      }
+      const toBeGrouped = allTabs.slice(i + 1, j)
+      const chromeProtocolFiltered = toBeGrouped.filter(filterChromeProtocol)
+      const title = request.payload.groupName || TITLE_PLACEHOLDER
+      chrome.tabs.group({ tabIds: chromeProtocolFiltered.map(tab => tab.id) }).then(groupId => {
+        chrome.tabGroups.update(groupId, { title })
+      })
+      await query.add(db, {
+        title,
+        list: chromeProtocolFiltered.map(mapTabToCollection),
+      })
+      if (chromeProtocolFiltered.length < toBeGrouped.length) {
+        response = "Internal chrome tabs can't be added"
+      }
+      reloadExtensionContent({ excludeSelf: false })
+      break
+    }
     case 'create collection using a group': {
-      const TITLE_PLACEHOLDER = 'New Collections'
       const {
         payload: { groupId },
       } = request
       if (typeof groupId === 'number' && groupId >= 0) {
         const groupInfoPromise = chrome.tabGroups.get(groupId)
         const tabsInfoPromise = chrome.tabs.query({ currentWindow: true })
-        Promise.all([groupInfoPromise, tabsInfoPromise]).then(([groupInfo, tabsInfo]) => {
-          query
-            .add(db, {
-              title: groupInfo.title.trim() ? groupInfo.title : TITLE_PLACEHOLDER,
-              list: tabsInfo
-                .filter(tab => tab.groupId === groupId)
-                .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
-            })
-            .then(() => {
-              reloadExtensionContent({ excludeSelf: false })
-            })
+        const [groupInfo, tabsInfo] = await Promise.all([groupInfoPromise, tabsInfoPromise])
+        const tabsInTheGroup = tabsInfo.filter(tab => tab.groupId === groupId)
+        const list = tabsInTheGroup.filter(filterChromeProtocol).map(mapTabToCollection)
+        await query.add(db, {
+          title: groupInfo.title.trim() ? groupInfo.title : TITLE_PLACEHOLDER,
+          list,
         })
+        reloadExtensionContent({ excludeSelf: false })
+        if (list.length < tabsInTheGroup.length) {
+          response = "Internal chrome tabs can't be added"
+        }
       } else {
         const tab = sender.tab
-        query
-          .add(db, { title: TITLE_PLACEHOLDER, list: [{ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] }] })
-          .then(() => {
-            reloadExtensionContent({ excludeSelf: false })
-          })
+        query.add(db, { title: TITLE_PLACEHOLDER, list: [mapTabToCollection(tab)] }).then(() => {
+          reloadExtensionContent({ excludeSelf: false })
+        })
       }
       break
     }
@@ -207,6 +196,15 @@ async function handleMessage(request, sender) {
           })
         })
       }
+      break
+    }
+    case 'get token': {
+      response = await new Promise(resolve => {
+        chrome.identity.getAuthToken({ interactive: true }, token => {
+          resolve(token)
+        })
+      })
+      break
     }
   }
 
@@ -219,27 +217,4 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
   // return true indicates that this event listener will response asynchronously
   return true
-})
-
-// Tell the tab whether the extension has been pinned on the page, when the tab is activated, refreshed or created
-function updateHandler(tabId) {
-  localStorage.get(['pinned', 'location'], ({ pinned, location }) => {
-    chrome.tabs.sendMessage(tabId, {
-      type: 'activeInfo',
-      payload: { pinned },
-    })
-    chrome.tabs.sendMessage(tabId, {
-      type: 'route change',
-      payload: { route: location },
-    })
-  })
-}
-chrome.tabs.onActivated.addListener(activeInfo => {
-  updateHandler(activeInfo.tabId)
-})
-
-chrome.tabs.onUpdated.addListener(updateHandler)
-
-chrome.tabs.onCreated.addListener(tab => {
-  updateHandler(tab.id)
 })

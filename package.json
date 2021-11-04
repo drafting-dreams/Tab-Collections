@@ -1,6 +1,6 @@
 {
   "name": "tab_collections",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Shawn Liu",
   "scripts": {
     "build": "gulp build",
@@ -9,6 +9,7 @@
   "dependencies": {
     "@material-ui/core": "^4.11.1",
     "@material-ui/icons": "^4.9.1",
+    "@material-ui/lab": "^4.0.0-alpha.60",
     "react": "^17.0.1",
     "react-dom": "^17.0.1"
   },

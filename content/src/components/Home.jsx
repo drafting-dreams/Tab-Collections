@@ -1,22 +1,61 @@
-import React, { useContext, useEffect, useState, useRef } from 'react'
+import React, { useContext, useEffect, useState, useRef, useReducer } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
-import { Paper, Link, Menu, MenuItem, ListItemIcon, Checkbox, Tooltip, Divider } from '@material-ui/core'
-import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
-import AddSharpIcon from '@material-ui/icons/AddSharp'
-import DeleteOutlineOutlined from '@material-ui/icons/DeleteOutlineOutlined'
-import OpenInBrowserOutlinedIcon from '@material-ui/icons/OpenInBrowserOutlined'
-import FolderOpenOutlinedIcon from '@material-ui/icons/FolderOpenOutlined'
-import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
-import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
-import PostAddOutlinedIcon from '@material-ui/icons/PostAddOutlined'
-import SwapCallsIcon from '@material-ui/icons/SwapCalls'
+import {
+  Paper,
+  Link,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  Checkbox,
+  Tooltip,
+  Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Button,
+  TextField,
+} from '@material-ui/core'
+import {
+  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+  CheckBox as CheckBoxIcon,
+  CloseOutlined as CloseSharpIcon,
+  AddSharp as AddSharpIcon,
+  DeleteOutlineOutlined as DeleteOutlineOutlinedIcon,
+  OpenInBrowserOutlined as OpenInBrowserOutlinedIcon,
+  FolderOpenOutlined as FolderOpenOutlinedIcon,
+  MoreHorizOutlined as MoreHorizOutlinedIcon,
+  PostAddOutlined as PostAddOutlinedIcon,
+  SwapCalls as SwapCallsIcon,
+  TransformOutlined as TransformOutlinedIcon,
+  BackupOutlined as BackupOutlinedIcon,
+  CloudDownloadOutlined as CloudDownloadOutlinedIcon,
+  ArchiveOutlined as ArchiveOutlinedIcon,
+} from '@material-ui/icons'
 
-// Edge Browser also has this chrome info in its useragent,
-// So here I only use the Chrome version.
-// Note: chrome.tabGroups API is only available with Chrome89+ and Manifest V3+
-const CHROME_VERSION = /Chrome\/(\d+)/.exec(navigator.userAgent) ? Number(/Chrome\/(\d+)/.exec(navigator.userAgent)[1]) : 0
-const ENABLE_GROUP_TAB_FEATURE = CHROME_VERSION >= 89
+import AppContext from '../context'
+
+import { ENABLE_GROUP_TAB_FEATURE, ENABLE_ARCHIVE } from '../utils/featureToggles'
+
+import { useDialogStyles, useDialogActionsStyles } from '../styles/madeStyles'
+
+const NEW_COLLECTIONS = 'New Collections'
+
+const dialogInitialState = null
+function dialogReducer(state, action) {
+  const { type, groupName } = action
+  switch (action.type) {
+    case 'close':
+      return null
+    case 'create collection with surroundings':
+      return { type, groupName: NEW_COLLECTIONS }
+    case 'input':
+      return { ...state, groupName }
+    default:
+      return null
+  }
+}
 
 function Home(props) {
   const { setLocation } = useContext(RouteContext)
@@ -39,7 +78,7 @@ function Home(props) {
       {
         type: 'add collection',
         payload: {
-          title: 'New Collections',
+          title: NEW_COLLECTIONS,
           list: [],
         },
       },
@@ -49,14 +88,62 @@ function Home(props) {
     )
   }
 
+  // Toast
+  const { setToast } = useContext(AppContext)
+
+  // Dialog
+  const dialogInputRef = useRef()
+  const [dialogState, dialogDispatch] = useReducer(dialogReducer, dialogInitialState)
+  const handleDialogClose = () => {
+    dialogDispatch({ type: 'close' })
+  }
+  const handleDialogInput = e => {
+    dialogDispatch({ type: 'input', groupName: e.currentTarget.value })
+  }
+  const handleSubmit = () => {
+    if (dialogState?.type === 'create collection with surroundings') {
+      chrome.runtime.sendMessage({ type: dialogState.type, payload: dialogState }, response => {
+        if (response) {
+          setToast(response)
+        }
+      })
+    }
+    dialogDispatch({ type: 'close' })
+  }
+
+  // Deletion Confirm Dialog
+  const isBatchDelete = useRef(false)
+  const [displayDeleteDialog, setDisplayDeleteDialog] = useState(false)
+  const handleDeleteDialogClose = () => {
+    setDisplayDeleteDialog(false)
+  }
+
+  // MoreOptionsMenu
   const openMoreOptionsMenu = event => {
     const position = event.currentTarget.getBoundingClientRect()
     setMoreClickPosition({ x: position.left, y: position.bottom })
   }
+  const closeMoreOptionsMenu = () => {
+    setMoreClickPosition(null)
+  }
+  const createCollectionWithSurroundings = () => {
+    closeMoreOptionsMenu()
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
+      if (response.pinned) {
+        setToast("Can't group a pinned tab")
+      } else if (response.groupId >= 0) {
+        setToast('Current tab is already in a group')
+      } else {
+        dialogDispatch({ type: 'create collection with surroundings' })
+      }
+    })
+  }
   const createCollectionWithGroup = () => {
     chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
       const { groupId } = response
-      chrome.runtime.sendMessage({ type: 'create collection using a group', payload: { groupId } })
+      chrome.runtime.sendMessage({ type: 'create collection using a group', payload: { groupId } }, response => {
+        setToast(response)
+      })
     })
   }
 
@@ -86,12 +173,21 @@ function Home(props) {
       }
     })
   }
+  const handleClickDeleteItem = () => {
+    isBatchDelete.current = false
+    setDisplayDeleteDialog(true)
+    setRightClickPosition(null)
+  }
   const deleteCollection = () => {
     chrome.runtime.sendMessage({ type: 'delete collection', payload: { keys: [collections[menuSelected.current].id] } })
     const temp = [...collections]
     temp.splice(menuSelected.current, 1)
     setCollections(temp)
-    setRightClickPosition(null)
+    handleDeleteDialogClose()
+  }
+  const handleClickBatchDeleteIcon = () => {
+    isBatchDelete.current = true
+    setDisplayDeleteDialog(true)
   }
   const deleteSelected = () => {
     chrome.runtime.sendMessage({ type: 'delete collection', payload: { keys: selectedList.map(idx => collections[idx].id) } })
@@ -101,15 +197,11 @@ function Home(props) {
     })
     setCollections(temp.filter(c => c !== undefined))
     setSelectedList([])
+    handleDeleteDialogClose()
   }
   const handleMenuClose = () => {
     setRightClickPosition(null)
   }
-  useEffect(() => {
-    if (rightClickPosition === null) {
-      menuSelected.current = undefined
-    }
-  }, [rightClickPosition])
 
   const checkOn = idx => {
     const filtered = selectedList.filter(i => i !== idx)
@@ -117,6 +209,234 @@ function Home(props) {
       filtered.push(idx)
     }
     setSelectedList(filtered)
+  }
+
+  const fileName = 'TabCollections.backup'
+  const backup = () => {
+    setMoreClickPosition(null)
+    chrome.runtime.sendMessage({ type: 'get token' }, token => {
+      if (!token) {
+        setToast('Authenticate failed')
+        return
+      }
+      chrome.runtime.sendMessage({ type: 'get all' }, response => {
+        const createBackupFile = () => {
+          response.forEach(collection => {
+            delete collection.id
+          })
+          const metadata = new Blob([JSON.stringify({ name: 'TabCollections.backup' })], { type: 'application/json' })
+          const file = new Blob([JSON.stringify(response)], { type: 'application/json' })
+          const form = new FormData()
+          form.append('metadata', metadata)
+          form.append('myfile', file)
+          const xhr = new XMLHttpRequest()
+          xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart')
+          xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+          xhr.responseType = 'json'
+          xhr.onload = () => {
+            if (xhr.response.id) setToast("Succeessfully backed up in 'TabCollections.backup'", 'success')
+            else {
+              setToast(xhr.response === 'string' ? xhr.response : "Couldn't create backup file", 'error')
+            }
+          }
+          xhr.onerror = () => {
+            setToast('Network error', 'error')
+          }
+          xhr.send(form)
+        }
+        const listFiles = new XMLHttpRequest()
+        listFiles.open('GET', `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${fileName}'`)}`)
+        listFiles.setRequestHeader('Authorization', 'Bearer ' + token)
+        listFiles.onload = () => {
+          let fileListRes
+          try {
+            fileListRes = JSON.parse(listFiles.response)
+          } catch {
+            console.warn('list files reponse format is not a json')
+          }
+          if (fileListRes?.files?.length) {
+            Promise.all(
+              fileListRes.files.map(
+                file =>
+                  new Promise((resolve, reject) => {
+                    const deleteFile = new XMLHttpRequest()
+                    deleteFile.open('DELETE', `https://www.googleapis.com/drive/v2/files/${file.id}`)
+                    deleteFile.onerror = () => {
+                      reject('Failed to delete old backup files')
+                    }
+                    deleteFile.onload = () => {
+                      if (deleteFile.response) {
+                        reject('Failed to delete old backup files')
+                      } else {
+                        resolve()
+                      }
+                    }
+                    deleteFile.setRequestHeader('Authorization', 'Bearer ' + token)
+                    deleteFile.send()
+                  })
+              )
+            )
+              .then(() => {
+                createBackupFile()
+              })
+              .catch(() => {
+                setToast("Couldn't create backup file")
+              })
+          } else {
+            createBackupFile()
+          }
+        }
+        listFiles.onerror = () => {
+          setToast('Network error', 'error')
+        }
+        listFiles.send()
+      })
+    })
+  }
+  const restore = () => {
+    setMoreClickPosition(null)
+    chrome.runtime.sendMessage({ type: 'get token' }, token => {
+      if (!token) {
+        setToast('Authenticate failed')
+        return
+      }
+      const xhr = new XMLHttpRequest()
+      xhr.open('GET', `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${fileName}'`)}`)
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+      xhr.onload = () => {
+        let fileListRes
+        try {
+          fileListRes = JSON.parse(xhr.response)
+        } catch {
+          console.warn('list files reponse format is not a json')
+        }
+        if (fileListRes.files) {
+          if (fileListRes.files.length) {
+            const fileId = fileListRes.files[0].id
+            const readFile = new XMLHttpRequest()
+            readFile.open('GET', `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`)
+            readFile.setRequestHeader('Authorization', 'Bearer ' + token)
+            readFile.onload = async () => {
+              let collections
+              try {
+                collections = JSON.parse(readFile.response)
+                chrome.runtime.sendMessage({ type: 'add collections', payload: collections }, () => {
+                  setToast('Successfully imported', 'success')
+                })
+              } catch {
+                setToast('Backup file damaged', 'error')
+              }
+            }
+            readFile.onerror = () => {
+              setToast('Network error', 'error')
+            }
+            readFile.send()
+          } else {
+            setToast('Backup file not found')
+          }
+        } else {
+          setToast("Couldn't read files")
+        }
+      }
+      xhr.onerror = () => {
+        setToast('Network error', 'error')
+      }
+      xhr.send()
+    })
+  }
+  const archive = (batch = false) => {
+    let archivingList
+    if (batch) {
+      archivingList = selectedList.map(idx => collections[idx])
+    } else {
+      archivingList = [collections[menuSelected.current]]
+    }
+    const folderMimeType = 'application/vnd.google-apps.folder'
+    const folderName = 'TabCollections-Archives'
+    setRightClickPosition(null)
+    setSelectedList([])
+    chrome.runtime.sendMessage({ type: 'get token' }, token => {
+      if (!token) {
+        setToast('Authenticate failed')
+        return
+      }
+      const createArchiveFile = folder => {
+        Promise.all(
+          archivingList.map(
+            collection =>
+              new Promise((resolve, reject) => {
+                const form = new FormData()
+                const metadata = new Blob([JSON.stringify({ name: collection.title, parents: [folder] })], { type: 'application/json' })
+                const file = new Blob([collection.list.reduce((prev, cur, index) => `${prev}${index + 1}. ${cur.title}\r\n    ${cur.url}\r\n`, '')], {
+                  type: 'text/plain',
+                })
+                form.append('metadat', metadata)
+                form.append('myfile', file)
+                const xhr = new XMLHttpRequest()
+                xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart')
+                xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+                xhr.onload = () => {
+                  try {
+                    if (JSON.parse(xhr.response).id) {
+                      resolve()
+                    } else {
+                      reject()
+                    }
+                  } catch {
+                    reject()
+                  }
+                }
+                xhr.onerror = () => {
+                  reject()
+                }
+                xhr.send(form)
+              })
+          )
+        )
+          .then(() => {
+            setToast('Successfully archived', 'success')
+          })
+          .catch(() => {
+            setToast('Failed to archive')
+          })
+      }
+      const searchFolder = new XMLHttpRequest()
+      searchFolder.open('GET', `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${folderName}'`)}`)
+      searchFolder.setRequestHeader('Authorization', 'Bearer ' + token)
+      searchFolder.onload = () => {
+        let searchFolderRes, folderId
+        try {
+          searchFolderRes = JSON.parse(searchFolder.response)
+        } catch {
+          setToast('Invalid response')
+        }
+        if (!(searchFolderRes?.files?.length && searchFolderRes.files[0].mimeType === 'application/vnd.google-apps.folder')) {
+          const createFolder = new XMLHttpRequest()
+          createFolder.open('POST', 'https://www.googleapis.com/drive/v3/files')
+          createFolder.setRequestHeader('Content-Type', 'application/json')
+          createFolder.setRequestHeader('Authorization', 'Bearer ' + token)
+          createFolder.onload = () => {
+            try {
+              folderId = JSON.parse(createFolder.response).id
+              createArchiveFile(folderId)
+            } catch {
+              setToast('Invalid Response')
+            }
+          }
+          createFolder.onerror = () => {
+            setToast('Network error', 'error')
+          }
+          createFolder.send(JSON.stringify({ name: folderName, mimeType: folderMimeType }))
+        } else {
+          folderId = searchFolderRes.files[0].id
+          createArchiveFile(folderId)
+        }
+      }
+      searchFolder.onerror = () => {
+        setToast('Network error', 'error')
+      }
+      searchFolder.send()
+    })
   }
 
   const showOpenAllTabsMenuItem = menuSelected.current !== undefined && collections[menuSelected.current]?.list.length > 0
@@ -145,7 +465,7 @@ function Home(props) {
             <MoreHorizOutlinedIcon className="icon icon-more" />
           </Tooltip>
         )}
-        {ENABLE_GROUP_TAB_FEATURE && (
+        {(ENABLE_GROUP_TAB_FEATURE || ENABLE_ARCHIVE) && (
           <Menu
             container={document.querySelector('.tab-collections-react-root')}
             autoFocus={false}
@@ -153,16 +473,41 @@ function Home(props) {
             anchorPosition={moreClickPosition ? { left: moreClickPosition.x - 300, top: moreClickPosition.y } : undefined}
             keepMounted
             open={moreClickPosition !== null}
-            onClose={() => {
-              setMoreClickPosition(null)
-            }}
+            onClose={closeMoreOptionsMenu}
           >
-            <MenuItem className="list-text" onClick={createCollectionWithGroup}>
-              <ListItemIcon className="list-icon-root">
-                <PostAddOutlinedIcon className="list-icon" />
-              </ListItemIcon>
-              Create collection with current tab group
-            </MenuItem>
+            {ENABLE_GROUP_TAB_FEATURE && (
+              <MenuItem className="list-text" onClick={createCollectionWithSurroundings}>
+                <ListItemIcon className="list-icon-root">
+                  <TransformOutlinedIcon className="list-icon" />
+                </ListItemIcon>
+                Group surroundings into a collection
+              </MenuItem>
+            )}
+            {ENABLE_GROUP_TAB_FEATURE && (
+              <MenuItem className="list-text" onClick={createCollectionWithGroup}>
+                <ListItemIcon className="list-icon-root">
+                  <PostAddOutlinedIcon className="list-icon" />
+                </ListItemIcon>
+                Create collection with current tab group
+              </MenuItem>
+            )}
+            {ENABLE_ARCHIVE && ENABLE_GROUP_TAB_FEATURE && <Divider />}
+            {ENABLE_ARCHIVE && (
+              <MenuItem className="list-text" onClick={backup}>
+                <ListItemIcon className="list-icon-root">
+                  <BackupOutlinedIcon className="list-icon" />
+                </ListItemIcon>
+                Backup
+              </MenuItem>
+            )}
+            {ENABLE_ARCHIVE && (
+              <MenuItem className="list-text" onClick={restore}>
+                <ListItemIcon className="list-icon-root">
+                  <CloudDownloadOutlinedIcon className="list-icon" />
+                </ListItemIcon>
+                Import from backup
+              </MenuItem>
+            )}
           </Menu>
         )}
         <Paper className="selected-tip" style={{ display: selectedList.length ? 'flex' : 'none' }}>
@@ -173,8 +518,16 @@ function Home(props) {
             }}
           />
           <span style={{ flexGrow: 1, marginLeft: '2px' }}>{selectedList.length} collections selected</span>
+          <Tooltip title="Archive selected" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
+            <ArchiveOutlinedIcon
+              className="tip-icon"
+              onClick={() => {
+                archive(true)
+              }}
+            />
+          </Tooltip>
           <Tooltip title="Delete selected" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
-            <DeleteOutlineOutlinedIcon className="tip-icon" onClick={deleteSelected} />
+            <DeleteOutlineOutlinedIcon className="tip-icon" onClick={handleClickBatchDeleteIcon} />
           </Tooltip>
         </Paper>
       </div>
@@ -207,7 +560,12 @@ function Home(props) {
                   checkOn(idx)
                 }}
               >
-                <Checkbox color="primary" checked={selected} />
+                <Checkbox
+                  color="primary"
+                  checked={selected}
+                  icon={<CheckBoxOutlineBlankIcon style={{ fontSize: 18 }} />}
+                  checkedIcon={<CheckBoxIcon style={{ fontSize: 18 }} />}
+                />
               </div>
             </Paper>
           )
@@ -252,14 +610,62 @@ function Home(props) {
             </MenuItem>
           )}
           {showOpenAllTabsMenuItem && <Divider />}
-          <MenuItem className="list-text" onClick={deleteCollection}>
+          {ENABLE_ARCHIVE && (
+            <MenuItem
+              className="list-text"
+              onClick={() => {
+                archive()
+              }}
+            >
+              <ListItemIcon className="list-icon-root">
+                <ArchiveOutlinedIcon className="list-icon" />
+              </ListItemIcon>
+              Archive
+            </MenuItem>
+          )}
+          {ENABLE_ARCHIVE && <Divider />}
+          <MenuItem className="list-text" onClick={handleClickDeleteItem}>
             <ListItemIcon className="list-icon-root">
-              <DeleteOutlineOutlined className="list-icon" />
+              <DeleteOutlineOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Delete
           </MenuItem>
         </Menu>
       </div>
+      <Dialog classes={useDialogStyles()} open={!!dialogState} onClose={handleDialogClose}>
+        <DialogTitle onClose={handleDialogClose}>Input Group Name</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            inputRef={dialogInputRef}
+            value={dialogState?.groupName || ''}
+            onChange={handleDialogInput}
+            onFocus={() => {
+              requestAnimationFrame(() => {
+                dialogInputRef.current.select()
+              })
+            }}
+            style={{ width: '400px' }}
+          />
+        </DialogContent>
+        <DialogActions classes={useDialogActionsStyles()}>
+          <Button onClick={handleDialogClose}>Cancel</Button>
+          <Button variant="contained" color="primary" onClick={handleSubmit}>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog classes={useDialogStyles()} open={displayDeleteDialog} onClose={handleDeleteDialogClose}>
+        <DialogTitle onClose={handleDeleteDialogClose}>Delete Collection</DialogTitle>
+        <DialogContent>{`Are you sure you want to delete the selected collection(s)?`}</DialogContent>
+        <DialogActions classes={useDialogActionsStyles()}>
+          <Button onClick={handleDeleteDialogClose}>Cancel</Button>
+          <Button onClick={isBatchDelete.current ? deleteSelected : deleteCollection} className="alert-color">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }

@@ -1,18 +1,50 @@
 import React, { useEffect, useState, useContext, useRef } from 'react'
 import { unpin } from '../scripts'
 import { RouteContext } from './Router.jsx'
-import { Paper, Menu, MenuItem, ListItemIcon, InputBase, Link, Divider, Tooltip, Checkbox } from '@material-ui/core'
-import CloseSharpIcon from '@material-ui/icons/CloseOutlined'
-import AddSharpIcon from '@material-ui/icons/AddSharp'
-import ArrowBackIosOutlinedIcon from '@material-ui/icons/ArrowBackIosOutlined'
-import InsertDriveFileOutlinedIcon from '@material-ui/icons/InsertDriveFileOutlined'
-import DeleteOutlineOutlinedIcon from '@material-ui/icons/DeleteOutlineOutlined'
-import AddBoxOutlinedIcon from '@material-ui/icons/AddBoxOutlined'
-import OpenInBrowserOutlinedIcon from '@material-ui/icons/OpenInBrowserOutlined'
-import MoreHorizOutlinedIcon from '@material-ui/icons/MoreHorizOutlined'
-import LibraryAddOutlinedIcon from '@material-ui/icons/LibraryAddOutlined'
-import LinkOutlinedIcon from '@material-ui/icons/LinkOutlined'
-import { copy } from '../../../utils'
+import {
+  Paper,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  InputBase,
+  Link,
+  Divider,
+  Tooltip,
+  Checkbox,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from '@material-ui/core'
+import {
+  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+  CheckBox as CheckBoxIcon,
+  CloseOutlined as CloseSharpIcon,
+  AddSharp as AddSharpIcon,
+  ArrowBackIosOutlined as ArrowBackIosOutlinedIcon,
+  InsertDriveFileOutlined as InsertDriveFileOutlinedIcon,
+  DeleteOutlineOutlined as DeleteOutlineOutlinedIcon,
+  AddCircleOutlineOutlined as AddCircleOutlineOutlinedIcon,
+  AddBoxOutlined as AddBoxOutlinedIcon,
+  FormatIndentIncreaseOutlined as FormatIndentIncreaseOutlinedIcon,
+  FormatIndentDecreaseOutlined as FormatIndentDecreaseOutlinedIcon,
+  PostAddOutlined as PostAddOutlinedIcon,
+  OpenInBrowserOutlined as OpenInBrowserOutlinedIcon,
+  MoreHorizOutlined as MoreHorizOutlinedIcon,
+  LibraryAddOutlined as LibraryAddOutlinedIcon,
+  LinkOutlined as LinkOutlinedIcon,
+  FolderOpenOutlined as FolderOpenOutlinedIcon,
+  SwapCalls as SwapCallsIcon,
+} from '@material-ui/icons'
+
+import AppContext from '../context'
+
+import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
+
+import { copy, mapTabToCollection } from '../utils'
+
+import { useDialogStyles, useDialogActionsStyles } from '../styles/madeStyles'
 
 function goBack(setLocation) {
   setLocation('/')
@@ -42,6 +74,8 @@ function Collection(props) {
     })
   }, [id])
 
+  const { setToast } = useContext(AppContext)
+
   const updateCollection = payload => {
     if (!pending.current) chrome.runtime.sendMessage({ type: 'update collection', payload })
   }
@@ -63,7 +97,32 @@ function Collection(props) {
   }
   useEffect(() => {
     if (prevList.current !== null && list.length !== prevList.current.length) {
-      updateCollection({ title, list, id: Number(id) })
+      let toastMessage = ''
+      const chromeFilteredOutList = list.filter(tab => {
+        return !tab.url.startsWith('chrome://')
+      })
+      if (chromeFilteredOutList.length !== list.length) {
+        toastMessage = "Internal chrome tabs can't be added"
+      }
+
+      const urlSet = new Set()
+      const deDuplicatedList = chromeFilteredOutList.filter(tab => {
+        if (urlSet.has(tab.url)) {
+          return false
+        }
+        urlSet.add(tab.url)
+        return true
+      })
+      if (deDuplicatedList.length !== chromeFilteredOutList.length) {
+        toastMessage = "Tabs with duplicated urls won't be added to the collection"
+      }
+
+      if (toastMessage) {
+        setToast(toastMessage)
+        setList(deDuplicatedList)
+      } else {
+        updateCollection({ title, list, id: Number(id) })
+      }
     }
   }, [list])
   useEffect(() => {
@@ -84,16 +143,34 @@ function Collection(props) {
     setRightClickPosition(null)
   }
 
+  const deleteType = useRef('one') // 'one', 'selected', 'all'
+  const [displayDeleteDialog, setDisplayDeleteDialog] = useState(false)
+  const handleDeleteDialogClose = () => {
+    setDisplayDeleteDialog(false)
+  }
+  const openDeleteOne = () => {
+    deleteType.current = 'one'
+    setDisplayDeleteDialog(true)
+    setRightClickPosition(null)
+  }
+  const openDeleteSelected = () => {
+    deleteType.current = 'selected'
+    setDisplayDeleteDialog(true)
+  }
+  const openDeleteAll = () => {
+    deleteType.current = 'all'
+    setDisplayDeleteDialog(true)
+    setMoreClickPosition(null)
+  }
   const deleteOne = () => {
     const deletedList = [...list]
     deletedList.splice(menuSelected.current, 1)
     setList(deletedList)
-
-    setRightClickPosition(null)
+    handleDeleteDialogClose()
   }
   const deleteAll = () => {
     setList([])
-    setMoreClickPosition(null)
+    handleDeleteDialogClose()
   }
   const deleteSelected = () => {
     const temp = [...list]
@@ -102,11 +179,39 @@ function Collection(props) {
     })
     setList(temp.filter(item => item !== undefined))
     setSelectedList([])
+    handleDeleteDialogClose()
+  }
+  const confirmDelete = () => {
+    switch (deleteType.current) {
+      case 'one':
+        deleteOne()
+        break
+      case 'selected':
+        deleteSelected()
+        break
+      case 'all':
+        deleteAll()
+    }
   }
 
   const openOneInCurrentTab = () => {
     window.location.href = list[menuSelected.current].url
     setRightClickPosition(null)
+  }
+  const openTabsInAGroup = () => {
+    chrome.runtime.sendMessage({ type: 'open tabs in a group', payload: { title, list } })
+    setMoreClickPosition(null)
+  }
+  const replaceCurrentGroup = () => {
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, response => {
+      const { groupId } = response
+      if (typeof groupId === 'number' && groupId >= 0) {
+        chrome.runtime.sendMessage({ type: 'replace current group', payload: { groupId, collection: { title, list } } })
+        setMoreClickPosition(null)
+      } else {
+        openTabsInAGroup()
+      }
+    })
   }
   const openAllInNewTab = () => {
     list.forEach(item => {
@@ -127,12 +232,52 @@ function Collection(props) {
   }
   const addAllTabs = unpinned => () => {
     chrome.runtime.sendMessage({ type: 'get tabs info', payload: { unpinned } }, function (response) {
-      setList([
-        ...list,
-        ...response
-          .filter(tab => /^(http|https)/.test(tab.url))
-          .map(tab => ({ url: tab.url, title: tab.title, favicon: tab.favIconUrl, host: tab.url.split('/')[2] })),
-      ])
+      setList([...list, ...response.map(mapTabToCollection)])
+      setMoreClickPosition(null)
+    })
+  }
+  const addStandaloneTabs = () => {
+    chrome.runtime.sendMessage({ type: 'get tabs info', payload: { unpinned: true } }, response => {
+      setList([...list, ...response.filter(tab => tab.groupId < 0).map(mapTabToCollection)])
+      setMoreClickPosition(null)
+    })
+  }
+  const addWithDirection = right => {
+    chrome.runtime.sendMessage({ type: 'get tabs info', payload: { unpinned: true } }, response => {
+      chrome.runtime.sendMessage({ type: 'get current tab info' }, currentTab => {
+        const tabsOnTheDirection = []
+        let currentTabIndex
+        for (let i = right ? 0 : response.length - 1; i >= 0 && i < response.length; i += right ? 1 : -1) {
+          if (response[i].id === currentTab.id) {
+            currentTabIndex = i
+            if (currentTab.groupId < 0) tabsOnTheDirection.push(response[i])
+            continue
+          } else if (currentTabIndex === undefined || (currentTab.groupId > -1 && response[i].groupId === currentTab.groupId)) {
+            continue
+          }
+
+          if (response[i].groupId > -1) {
+            break
+          }
+          tabsOnTheDirection.push(response[i])
+        }
+        if (!right) {
+          tabsOnTheDirection.reverse()
+        }
+        setList([...list, ...tabsOnTheDirection.map(mapTabToCollection)])
+        setMoreClickPosition(null)
+      })
+    })
+  }
+  const addTabsInTheSameGroup = () => {
+    chrome.runtime.sendMessage({ type: 'get current tab info' }, currentTab => {
+      if (currentTab.groupId < 0) {
+        setList([...list, mapTabToCollection(currentTab)])
+      } else {
+        chrome.runtime.sendMessage({ type: 'get tabs info' }, response => {
+          setList([...list, ...response.filter(tab => tab.groupId === currentTab.groupId).map(mapTabToCollection)])
+        })
+      }
       setMoreClickPosition(null)
     })
   }
@@ -146,9 +291,16 @@ function Collection(props) {
   }
 
   const copyUrl = () => {
-    copy(list[menuSelected.current].url)
-    setRightClickPosition(null)
+    try {
+      setRightClickPosition(null)
+      copy(list[menuSelected.current].url)
+      setToast('Successfully copied to clipboard', 'success')
+    } catch (err) {
+      setToast("Couldn't copy to clipboard")
+    }
   }
+
+  const showGroupTabFeatures = ENABLE_GROUP_TAB_FEATURE && !!list?.length
 
   return (
     <div className="tab-collections-container">
@@ -184,9 +336,6 @@ function Collection(props) {
             <span className="button-text">Add Current Tab</span>
           </Link>
         </div>
-        <Tooltip title="Add all tabs" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
-          <AddBoxOutlinedIcon className="icon icon-add-all" onClick={addAllTabs()} />
-        </Tooltip>
         <Tooltip title="More options" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400} onClick={openMoreOptionsMenu}>
           {/* <OpenInBrowserOutlinedIcon className="icon icon-open-all" onClick={openAllInNewTab} /> */}
           <MoreHorizOutlinedIcon className="icon icon-more" />
@@ -195,31 +344,90 @@ function Collection(props) {
           container={document.querySelector('.tab-collections-react-root')}
           autoFocus={false}
           anchorReference="anchorPosition"
-          anchorPosition={moreClickPosition ? { left: moreClickPosition.x - 200, top: moreClickPosition.y } : undefined}
+          anchorPosition={
+            moreClickPosition ? { left: moreClickPosition.x - (showGroupTabFeatures ? 240 : 190), top: moreClickPosition.y } : undefined
+          }
           keepMounted
           open={moreClickPosition !== null}
           onClose={() => {
             setMoreClickPosition(null)
           }}
         >
+          <MenuItem className="list-text" onClick={addStandaloneTabs}>
+            <ListItemIcon className="list-icon-root">
+              <AddCircleOutlineOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Add all standalone tabs
+          </MenuItem>
+          <MenuItem
+            className="list-text"
+            onClick={() => {
+              addWithDirection(true)
+            }}
+          >
+            <ListItemIcon className="list-icon-root">
+              <FormatIndentIncreaseOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Add standalones on the right
+          </MenuItem>
+          <MenuItem
+            className="list-text"
+            onClick={() => {
+              addWithDirection()
+            }}
+          >
+            <ListItemIcon className="list-icon-root">
+              <FormatIndentDecreaseOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Add standalones on the left
+          </MenuItem>
+          <MenuItem className="list-text" onClick={addTabsInTheSameGroup}>
+            <ListItemIcon className="list-icon-root">
+              <PostAddOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Add tabs in the same group
+          </MenuItem>
           <MenuItem className="list-text" onClick={addAllTabs(true)}>
             <ListItemIcon className="list-icon-root">
               <LibraryAddOutlinedIcon className="list-icon" />
             </ListItemIcon>
             Add all unpinned tabs
           </MenuItem>
-          <MenuItem className="list-text" onClick={deleteAll}>
+          <MenuItem className="list-text" onClick={addAllTabs()}>
             <ListItemIcon className="list-icon-root">
-              <DeleteOutlineOutlinedIcon className="list-icon" />
+              <AddBoxOutlinedIcon className="list-icon" />
             </ListItemIcon>
-            Delete all tabs
+            Add all tabs
           </MenuItem>
           <Divider />
+          {showGroupTabFeatures && (
+            <MenuItem className="list-text" onClick={openTabsInAGroup}>
+              <ListItemIcon className="list-icon-root">
+                <FolderOpenOutlinedIcon className="list-icon" />
+              </ListItemIcon>
+              Open all tabs in a new group
+            </MenuItem>
+          )}
+          {showGroupTabFeatures && (
+            <MenuItem className="list-text" onClick={replaceCurrentGroup}>
+              <ListItemIcon className="list-icon-root">
+                <SwapCallsIcon className="list-icon" />
+              </ListItemIcon>
+              Replace current group
+            </MenuItem>
+          )}
           <MenuItem className="list-text" onClick={openAllInNewTab}>
             <ListItemIcon className="list-icon-root">
               <OpenInBrowserOutlinedIcon className="list-icon" />
             </ListItemIcon>
-            Open all in new tabs
+            Open all tabs
+          </MenuItem>
+          <Divider />
+          <MenuItem className="list-text" onClick={openDeleteAll}>
+            <ListItemIcon className="list-icon-root">
+              <DeleteOutlineOutlinedIcon className="list-icon" />
+            </ListItemIcon>
+            Delete all tabs
           </MenuItem>
         </Menu>
         <Paper className="selected-tip" style={{ display: selectedList.length ? 'flex' : 'none' }}>
@@ -234,7 +442,7 @@ function Collection(props) {
             <OpenInBrowserOutlinedIcon className="tip-icon" onClick={openSelectedInNewTab} />
           </Tooltip>
           <Tooltip title="Delete selected" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
-            <DeleteOutlineOutlinedIcon className="tip-icon" onClick={deleteSelected} />
+            <DeleteOutlineOutlinedIcon className="tip-icon" onClick={openDeleteSelected} />
           </Tooltip>
         </Paper>
       </div>
@@ -272,7 +480,12 @@ function Collection(props) {
                     checkOn(idx)
                   }}
                 >
-                  <Checkbox color="primary" checked={selected} />
+                  <Checkbox
+                    color="primary"
+                    checked={selected}
+                    icon={<CheckBoxOutlineBlankIcon style={{ fontSize: 18 }} />}
+                    checkedIcon={<CheckBoxIcon style={{ fontSize: 18 }} />}
+                  />
                 </div>
               </Paper>
             )
@@ -298,7 +511,7 @@ function Collection(props) {
             </ListItemIcon>
             Copy URL
           </MenuItem>
-          <MenuItem className="list-text" onClick={deleteOne}>
+          <MenuItem className="list-text" onClick={openDeleteOne}>
             <ListItemIcon className="list-icon-root">
               <DeleteOutlineOutlinedIcon className="list-icon" />
             </ListItemIcon>
@@ -313,6 +526,16 @@ function Collection(props) {
           </MenuItem>
         </Menu>
       </div>
+      <Dialog classes={useDialogStyles()} open={displayDeleteDialog} onClose={handleDeleteDialogClose}>
+        <DialogTitle onClose={handleDeleteDialogClose}>Delete Tab</DialogTitle>
+        <DialogContent>{`Are you sure you want to delete the selected tab(s)?`}</DialogContent>
+        <DialogActions classes={useDialogActionsStyles()}>
+          <Button onClick={handleDeleteDialogClose}>Cancel</Button>
+          <Button onClick={confirmDelete} className="alert-color">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }
