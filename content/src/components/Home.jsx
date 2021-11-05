@@ -316,57 +316,53 @@ function Home(props) {
         setToast('Authenticate failed')
         return
       }
-      const createArchiveFile = folder => {
-        Promise.all(
-          archivingList.map(
-            collection =>
-              new Promise((resolve, reject) => {
-                const form = new FormData()
-                const metadata = new Blob([JSON.stringify({ name: collection.title, parents: [folder] })], { type: 'application/json' })
-                const file = new Blob([collection.list.reduce((prev, cur, index) => `${prev}${index + 1}. ${cur.title}\r\n    ${cur.url}\r\n`, '')], {
-                  type: 'text/plain',
-                })
-                form.append('metadat', metadata)
-                form.append('myfile', file)
-                const xhr = new XMLHttpRequest()
-                xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart')
-                xhr.setRequestHeader('Authorization', 'Bearer ' + token)
-                xhr.onload = () => {
-                  try {
-                    if (JSON.parse(xhr.response).id) {
-                      resolve()
-                    } else {
+      chrome.runtime.sendMessage({ type: 'get sync', payload: 'archive_folder_id' }, folderId => {
+        const createArchiveFile = folder => {
+          Promise.all(
+            archivingList.map(
+              collection =>
+                new Promise((resolve, reject) => {
+                  const form = new FormData()
+                  const metadata = new Blob([JSON.stringify({ name: collection.title, parents: [folder] })], { type: 'application/json' })
+                  const file = new Blob(
+                    [collection.list.reduce((prev, cur, index) => `${prev}${index + 1}. ${cur.title}\r\n    ${cur.url}\r\n`, '')],
+                    {
+                      type: 'text/plain',
+                    }
+                  )
+                  form.append('metadat', metadata)
+                  form.append('myfile', file)
+                  const xhr = new XMLHttpRequest()
+                  xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart')
+                  xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+                  xhr.onload = () => {
+                    try {
+                      if (JSON.parse(xhr.response).id) {
+                        resolve()
+                      } else {
+                        reject()
+                      }
+                    } catch {
                       reject()
                     }
-                  } catch {
+                  }
+                  xhr.onerror = () => {
                     reject()
                   }
-                }
-                xhr.onerror = () => {
-                  reject()
-                }
-                xhr.send(form)
-              })
+                  xhr.send(form)
+                })
+            )
           )
-        )
-          .then(() => {
-            setToast('Successfully archived', 'success')
-          })
-          .catch(() => {
-            setToast('Failed to archive')
-          })
-      }
-      const searchFolder = new XMLHttpRequest()
-      searchFolder.open('GET', `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${folderName}'`)}`)
-      searchFolder.setRequestHeader('Authorization', 'Bearer ' + token)
-      searchFolder.onload = () => {
-        let searchFolderRes, folderId
-        try {
-          searchFolderRes = JSON.parse(searchFolder.response)
-        } catch {
-          setToast('Invalid response')
+            .then(() => {
+              setToast('Successfully archived', 'success')
+            })
+            .catch(() => {
+              setToast('Failed to archive')
+            })
         }
-        if (!(searchFolderRes?.files?.length && searchFolderRes.files[0].mimeType === 'application/vnd.google-apps.folder')) {
+        if (folderId) {
+          createArchiveFile(folderId)
+        } else {
           const createFolder = new XMLHttpRequest()
           createFolder.open('POST', 'https://www.googleapis.com/drive/v3/files')
           createFolder.setRequestHeader('Content-Type', 'application/json')
@@ -374,6 +370,7 @@ function Home(props) {
           createFolder.onload = () => {
             try {
               folderId = JSON.parse(createFolder.response).id
+              chrome.runtime.sendMessage({ type: 'set sync', payload: { key: 'archive_folder_id', value: folderId } })
               createArchiveFile(folderId)
             } catch {
               setToast('Invalid Response')
@@ -383,15 +380,8 @@ function Home(props) {
             setToast('Network error', 'error')
           }
           createFolder.send(JSON.stringify({ name: folderName, mimeType: folderMimeType }))
-        } else {
-          folderId = searchFolderRes.files[0].id
-          createArchiveFile(folderId)
         }
-      }
-      searchFolder.onerror = () => {
-        setToast('Network error', 'error')
-      }
-      searchFolder.send()
+      })
     })
   }
 
