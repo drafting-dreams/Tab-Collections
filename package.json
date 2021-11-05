@@ -1,6 +1,6 @@
 {
   "name": "tab_collections",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "Shawn Liu",
   "scripts": {
     "build": "gulp build",
