@@ -211,7 +211,6 @@ function Home(props) {
     setSelectedList(filtered)
   }
 
-  const fileName = 'TabCollections.backup'
   const backup = () => {
     setMoreClickPosition(null)
     chrome.runtime.sendMessage({ type: 'get token' }, token => {
@@ -272,48 +271,33 @@ function Home(props) {
         setToast('Authenticate failed')
         return
       }
-      const xhr = new XMLHttpRequest()
-      xhr.open('GET', `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${fileName}'`)}`)
-      xhr.setRequestHeader('Authorization', 'Bearer ' + token)
-      xhr.onload = () => {
-        let fileListRes
-        try {
-          fileListRes = JSON.parse(xhr.response)
-        } catch {
-          console.warn('list files reponse format is not a json')
-        }
-        if (fileListRes.files) {
-          if (fileListRes.files.length) {
-            const fileId = fileListRes.files[0].id
-            const readFile = new XMLHttpRequest()
-            readFile.open('GET', `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`)
-            readFile.setRequestHeader('Authorization', 'Bearer ' + token)
-            readFile.onload = async () => {
-              let collections
-              try {
-                collections = JSON.parse(readFile.response)
-                chrome.runtime.sendMessage({ type: 'add collections', payload: collections }, () => {
-                  setToast('Successfully imported', 'success')
-                })
-              } catch {
-                setToast('Backup file damaged', 'error')
+      chrome.runtime.sendMessage({ type: 'get sync', payload: 'backup_file_id' }, backupFileId => {
+        if (backupFileId) {
+          const readFile = new XMLHttpRequest()
+          readFile.open('GET', `https://www.googleapis.com/drive/v3/files/${backupFileId}?alt=media`)
+          readFile.setRequestHeader('Authorization', 'Bearer ' + token)
+          readFile.onload = async () => {
+            let collections
+            try {
+              collections = JSON.parse(readFile.response)
+              if (!Array.isArray(collections)) {
+                throw Error()
               }
+              chrome.runtime.sendMessage({ type: 'add collections', payload: collections }, () => {
+                setToast('Successfully imported', 'success')
+              })
+            } catch {
+              setToast('Backup file damaged', 'error')
             }
-            readFile.onerror = () => {
-              setToast('Network error', 'error')
-            }
-            readFile.send()
-          } else {
-            setToast('Backup file not found')
           }
+          readFile.onerror = () => {
+            setToast('Network error', 'error')
+          }
+          readFile.send()
         } else {
-          setToast("Couldn't read files")
+          setToast('No backup file found')
         }
-      }
-      xhr.onerror = () => {
-        setToast('Network error', 'error')
-      }
-      xhr.send()
+      })
     })
   }
   const archive = (batch = false) => {
