@@ -19,7 +19,7 @@
   "action": {},
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjkx5AEHjV0vwh+Yh1XKaEbRHKHADg+BLMJPGWSPbf1mI1EZ97QDRH1wZ5dRZI72luo/4JHR/5F6tW51t5hpSj2gesILrWxXtve1yutonDAjMlgKCl8q+R4yA1x6vj29Uu+Iy/qZPt5g9So3xKXoczWfADI1ALg8/0zfJT2nFgQCBhi/tHaSiLzRKcUr4ZIsCp1cvyIxVOKBypLdW051imrAd7Yr6O25mnPZlkB1fpsNlnKWMrev1ZvfrTg3UsqWe2jUy0OAhfH6jP9g1uBPBzyaCkJ3C2vYYqqfokTYthbeyoIsmzKUsVns2fOwg/NsFOvajUDQlyfXpWqzuCxHXQwIDAQAB",
   "oauth2": {
-    "client_id": "355019657108-4472vfocfgc9r8ndjnmgjco8rkb0pnfv.apps.googleusercontent.com",
-    "scopes": ["https://www.googleapis.com/auth/drive"]
+    "client_id": "456381098403-gfpc4rbho4e1mi1m0sjeespdeerjpvsj.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/drive.file"]
   }
 }

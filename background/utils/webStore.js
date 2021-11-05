@@ -1,4 +1,5 @@
 export const localStorage = chrome.storage.local
+const syncStorage = chrome.storage.sync
 
 export function getLocalStorage(key) {
   return new Promise(resolve => {
@@ -16,4 +17,18 @@ export function getPinRegistry() {
 }
 export function setPinRegistry(ids) {
   setLocalStorage('pin_registry', ids.join(','))
+}
+
+export function getSyncStorage(key) {
+  console.log(syncStorage)
+  return new Promise(resolve => {
+    syncStorage.get([key], re => {
+      console.log(re)
+      resolve(re[key])
+    })
+  })
+}
+
+export function setSyncStorage(key, value) {
+  syncStorage.set({ [key]: value })
 }

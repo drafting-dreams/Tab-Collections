@@ -234,8 +234,10 @@ function Home(props) {
           xhr.setRequestHeader('Authorization', 'Bearer ' + token)
           xhr.responseType = 'json'
           xhr.onload = () => {
-            if (xhr.response.id) setToast("Succeessfully backed up in 'TabCollections.backup'", 'success')
-            else {
+            if (xhr.response.id) {
+              chrome.runtime.sendMessage({ type: 'set sync', payload: { key: 'backup_file_id', value: xhr.response.id } })
+              setToast("Succeessfully backed up in 'TabCollections.backup'", 'success')
+            } else {
               setToast(xhr.response === 'string' ? xhr.response : "Couldn't create backup file", 'error')
             }
           }
@@ -244,52 +246,22 @@ function Home(props) {
           }
           xhr.send(form)
         }
-        const listFiles = new XMLHttpRequest()
-        listFiles.open('GET', `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name = '${fileName}'`)}`)
-        listFiles.setRequestHeader('Authorization', 'Bearer ' + token)
-        listFiles.onload = () => {
-          let fileListRes
-          try {
-            fileListRes = JSON.parse(listFiles.response)
-          } catch {
-            console.warn('list files reponse format is not a json')
-          }
-          if (fileListRes?.files?.length) {
-            Promise.all(
-              fileListRes.files.map(
-                file =>
-                  new Promise((resolve, reject) => {
-                    const deleteFile = new XMLHttpRequest()
-                    deleteFile.open('DELETE', `https://www.googleapis.com/drive/v2/files/${file.id}`)
-                    deleteFile.onerror = () => {
-                      reject('Failed to delete old backup files')
-                    }
-                    deleteFile.onload = () => {
-                      if (deleteFile.response) {
-                        reject('Failed to delete old backup files')
-                      } else {
-                        resolve()
-                      }
-                    }
-                    deleteFile.setRequestHeader('Authorization', 'Bearer ' + token)
-                    deleteFile.send()
-                  })
-              )
-            )
-              .then(() => {
-                createBackupFile()
-              })
-              .catch(() => {
-                setToast("Couldn't create backup file")
-              })
+        chrome.runtime.sendMessage({ type: 'get sync', payload: 'backup_file_id' }, backupFileId => {
+          if (backupFileId) {
+            const deleteFile = new XMLHttpRequest()
+            deleteFile.open('DELETE', `https://www.googleapis.com/drive/v3/files/${backupFileId}`)
+            deleteFile.onerror = () => {
+              setToast('Network error', 'error')
+            }
+            deleteFile.onload = () => {
+              createBackupFile()
+            }
+            deleteFile.setRequestHeader('Authorization', 'Bearer ' + token)
+            deleteFile.send()
           } else {
             createBackupFile()
           }
-        }
-        listFiles.onerror = () => {
-          setToast('Network error', 'error')
-        }
-        listFiles.send()
+        })
       })
     })
   }

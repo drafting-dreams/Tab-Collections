@@ -2,7 +2,7 @@ import { getDB } from './db/connect'
 import * as query from './db/transactions'
 
 import { initOnInstalled, reloadExtensionContent, registerTabUpdateEvent, filterChromeProtocol, mapTabToCollection } from './utils'
-import { getLocalStorage, setLocalStorage, getPinRegistry, setPinRegistry } from './utils/webStore'
+import { getLocalStorage, setLocalStorage, getPinRegistry, setPinRegistry, setSyncStorage, getSyncStorage } from './utils/webStore'
 
 initOnInstalled()
 registerTabUpdateEvent()
@@ -205,6 +205,14 @@ async function handleMessage(request, sender) {
         })
       })
       break
+    }
+    case 'set sync': {
+      const { key, value } = request.payload
+      setSyncStorage(key, value)
+      break
+    }
+    case 'get sync': {
+      response = await getSyncStorage(request.payload)
     }
   }
 
