@@ -592,6 +592,11 @@ function Home(props) {
                 dialogInputRef.current.select()
               })
             }}
+            onKeyUp={event => {
+              if (event.key === 'Enter') {
+                handleSubmit()
+              }
+            }}
             style={{ width: '400px' }}
           />
         </DialogContent>
