@@ -354,7 +354,7 @@ function Home(props) {
             )
           )
             .then(() => {
-              setToast('Successfully archived', 'success')
+              setToast("Successfully archived in folder 'TabCollections-Archives'", 'success')
             })
             .catch(() => {
               setToast('Failed to archive')
