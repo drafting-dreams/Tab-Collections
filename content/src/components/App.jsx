@@ -8,7 +8,7 @@ import Switch from './Switch.jsx'
 import AppContext from '../context'
 import useToast from '../hooks/useToast.js'
 
-import { useAlertStyles, useToastStyles } from '../styles/madeStyles.js'
+import { alertStyles, toastStyles } from '../styles/madeStyles.js'
 
 let counter = 0
 
@@ -33,11 +33,11 @@ function App() {
         <Snackbar
           open={displayToast}
           autoHideDuration={3000}
-          classes={useToastStyles()}
+          classes={toastStyles}
           onClose={handleToastClose}
           anchorOrigin={{ horizontal: 'center', vertical: 'top' }}
         >
-          <Alert classes={useAlertStyles()} severity={severity} variant="filled">
+          <Alert classes={alertStyles} severity={severity} variant="filled">
             {toast}
           </Alert>
         </Snackbar>

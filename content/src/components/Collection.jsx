@@ -44,7 +44,7 @@ import { ENABLE_GROUP_TAB_FEATURE } from '../utils/featureToggles'
 
 import { copy, mapTabToCollection } from '../utils'
 
-import { useDialogStyles, useDialogActionsStyles } from '../styles/madeStyles'
+import { dialogStyles, dialogActionsStyles } from '../styles/madeStyles'
 
 function goBack(setLocation) {
   setLocation('/')
@@ -526,10 +526,10 @@ function Collection(props) {
           </MenuItem>
         </Menu>
       </div>
-      <Dialog classes={useDialogStyles()} open={displayDeleteDialog} onClose={handleDeleteDialogClose}>
+      <Dialog classes={dialogStyles} open={displayDeleteDialog} onClose={handleDeleteDialogClose}>
         <DialogTitle onClose={handleDeleteDialogClose}>Delete Tab</DialogTitle>
         <DialogContent>{`Are you sure you want to delete the selected tab(s)?`}</DialogContent>
-        <DialogActions classes={useDialogActionsStyles()}>
+        <DialogActions classes={dialogActionsStyles}>
           <Button onClick={handleDeleteDialogClose}>Cancel</Button>
           <Button onClick={confirmDelete} className="alert-color">
             Delete

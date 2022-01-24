@@ -38,7 +38,7 @@ import AppContext from '../context'
 
 import { ENABLE_GROUP_TAB_FEATURE, ENABLE_ARCHIVE } from '../utils/featureToggles'
 
-import { useDialogStyles, useDialogActionsStyles } from '../styles/madeStyles'
+import { dialogStyles, dialogActionsStyles } from '../styles/madeStyles'
 
 const NEW_COLLECTIONS = 'New Collections'
 
@@ -578,7 +578,7 @@ function Home(props) {
           </MenuItem>
         </Menu>
       </div>
-      <Dialog classes={useDialogStyles()} open={!!dialogState} onClose={handleDialogClose}>
+      <Dialog classes={dialogStyles} open={!!dialogState} onClose={handleDialogClose}>
         <DialogTitle onClose={handleDialogClose}>Input Group Name</DialogTitle>
         <DialogContent>
           <TextField
@@ -600,17 +600,17 @@ function Home(props) {
             style={{ width: '400px' }}
           />
         </DialogContent>
-        <DialogActions classes={useDialogActionsStyles()}>
+        <DialogActions classes={dialogActionsStyles}>
           <Button onClick={handleDialogClose}>Cancel</Button>
           <Button variant="contained" color="primary" onClick={handleSubmit}>
             Confirm
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog classes={useDialogStyles()} open={displayDeleteDialog} onClose={handleDeleteDialogClose}>
+      <Dialog classes={dialogStyles} open={displayDeleteDialog} onClose={handleDeleteDialogClose}>
         <DialogTitle onClose={handleDeleteDialogClose}>Delete Collection</DialogTitle>
         <DialogContent>{`Are you sure you want to delete the selected collection(s)?`}</DialogContent>
-        <DialogActions classes={useDialogActionsStyles()}>
+        <DialogActions classes={dialogActionsStyles}>
           <Button onClick={handleDeleteDialogClose}>Cancel</Button>
           <Button onClick={isBatchDelete.current ? deleteSelected : deleteCollection} className="alert-color">
             Delete

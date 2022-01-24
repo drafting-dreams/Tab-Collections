@@ -2,7 +2,7 @@ import React from 'react'
 import { render } from 'react-dom'
 import App from '../components/App.jsx'
 
-import '../styles/content.scss'
+import '../styles/content.global.scss'
 
 const HTML_CLASS = 'tab-collections-pinned'
 

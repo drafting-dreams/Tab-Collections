@@ -21,6 +21,24 @@ module.exports = {
       },
       {
         test: /\.s[ac]ss$/i,
+        exclude: /\.global\.s[ac]ss$/i,
+        use: [
+          MiniCssExtractPlugin.loader,
+          { loader: 'css-loader', options: { modules: true } },
+          'postcss-loader',
+          {
+            loader: 'sass-loader',
+            options: {
+              sassOptions: {
+                outputStyle: 'expanded',
+              },
+            },
+          },
+        ],
+      },
+
+      {
+        test: /\.global\.s[ac]ss$/i,
         use: [
           MiniCssExtractPlugin.loader,
           'css-loader',
