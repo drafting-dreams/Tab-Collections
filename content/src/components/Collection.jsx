@@ -225,6 +225,10 @@ function Collection(props) {
     })
     setSelectedList([])
   }
+  const openSelectedInAGroup = () => {
+    chrome.runtime.sendMessage({ type: 'open tabs in a group', payload: { title, list: selectedList.map(idx => list[idx]) } })
+    setSelectedList([])
+  }
 
   const openMoreOptionsMenu = event => {
     const position = event.currentTarget.getBoundingClientRect()
@@ -438,6 +442,9 @@ function Collection(props) {
             }}
           />
           <span style={{ flexGrow: 1, marginLeft: '2px' }}>{selectedList.length} tab selected</span>
+          <Tooltip title="Open selected in a new group" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
+            <FolderOpenOutlinedIcon className="tip-icon" onClick={openSelectedInAGroup} />
+          </Tooltip>
           <Tooltip title="Open selected" classes={{ popper: 'tab-collection-max-z-index' }} enterDelay={400}>
             <OpenInBrowserOutlinedIcon className="tip-icon" onClick={openSelectedInNewTab} />
           </Tooltip>
